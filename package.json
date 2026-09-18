@@ -1,0 +1,42 @@
+{
+  "name": "hcs-ipfs-document-vault",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Scaffold-HBAR template: HCS-anchored IPFS document vault",
+  "workspaces": [
+    "packages/ledger",
+    "packages/hardhat",
+    "packages/nextjs"
+  ],
+  "scripts": {
+    "lint": "yarn workspace @vault/ledger lint && yarn workspace @vault/hardhat lint && yarn workspace @vault/nextjs lint",
+    "format": "yarn workspace @vault/ledger format && yarn workspace @vault/hardhat format && yarn workspace @vault/nextjs format",
+    "test": "yarn workspace @vault/ledger test && yarn workspace @vault/hardhat test",
+    "build": "yarn workspace @vault/ledger build && yarn hardhat:compile && yarn next:build",
+    "hardhat:compile": "yarn workspace @vault/hardhat compile",
+    "hardhat:test": "yarn workspace @vault/hardhat test",
+    "hardhat:deploy": "yarn workspace @vault/hardhat deploy",
+    "hardhat:lint": "yarn workspace @vault/hardhat lint",
+    "hardhat:format": "yarn workspace @vault/hardhat format",
+    "hardhat:account:generate": "yarn workspace @vault/hardhat account:generate",
+    "next:dev": "yarn workspace @vault/nextjs dev",
+    "next:build": "yarn workspace @vault/nextjs build",
+    "next:start": "yarn workspace @vault/nextjs start",
+    "next:lint": "yarn workspace @vault/nextjs lint",
+    "next:format": "yarn workspace @vault/nextjs format",
+    "demo:attest": "yarn workspace @vault/nextjs demo:attest",
+    "demo:topic": "yarn workspace @vault/nextjs demo:topic",
+    "postinstall": "husky || true"
+  },
+  "packageManager": "yarn@3.2.3",
+  "devDependencies": {
+    "husky": "^9.1.6",
+    "lint-staged": "^15.2.10",
+    "prettier": "^3.3.3",
+    "typescript": "^5.6.3"
+  },
+  "engines": {
+    "node": ">=20.18.3"
+  },
+  "license": "MIT"
+}

@@ -1,0 +1,126 @@
+{
+  "name": "hcs-ipfs-document-vault",
+  "description": "HCS-anchored IPFS document vault: upload to IPFS, attest CID+sha256 on Hedera Consensus Service, optional HIP-336 pin fee, Mirror Node verify.",
+  "version": "0.1.0",
+  "create-scaffold-hbar": {
+    "capabilities": {
+      "frontend": ["nextjs-app"],
+      "solidityFramework": ["hardhat"],
+      "packageManager": ["yarn", "npm"]
+    },
+    "defaults": {
+      "frontend": "nextjs-app",
+      "solidityFramework": "hardhat",
+      "packageManager": "yarn"
+    },
+    "envVars": [
+      {
+        "key": "HEDERA_NETWORK",
+        "description": "Hedera network: testnet or mainnet"
+      },
+      {
+        "key": "HEDERA_ACCOUNT_ID",
+        "description": "Operator account ID (e.g. 0.0.x) for HCS submit / topic create"
+      },
+      {
+        "key": "HEDERA_PRIVATE_KEY",
+        "description": "Operator private key (ECDSA or ED25519). Never commit."
+      },
+      {
+        "key": "HCS_TOPIC_ID",
+        "description": "HCS topic ID that stores vault attestation messages"
+      },
+      {
+        "key": "HEDERA_MIRROR_NODE_URL",
+        "description": "Mirror Node REST base URL"
+      },
+      {
+        "key": "IPFS_API_URL",
+        "description": "IPFS HTTP API (Kubo) base URL, default http://127.0.0.1:5001"
+      },
+      {
+        "key": "IPFS_GATEWAY_URL",
+        "description": "Public IPFS gateway prefix for fetch links"
+      },
+      {
+        "key": "PIN_TOKEN_ID",
+        "description": "Optional HTS token for pin fee; leave empty for free attest"
+      },
+      {
+        "key": "PIN_FEE_AMOUNT",
+        "description": "Optional pin fee in token base units (bigint string)"
+      },
+      {
+        "key": "PIN_TREASURY_ACCOUNT_ID",
+        "description": "Optional treasury account that receives the pin fee"
+      },
+      {
+        "key": "PIN_FEE_CONTRACT_ADDRESS",
+        "description": "Optional deployed PinFeeCollector EVM address"
+      },
+      {
+        "key": "NEXT_PUBLIC_HEDERA_NETWORK",
+        "description": "Public network label for HashScan links"
+      },
+      {
+        "key": "NEXT_PUBLIC_HCS_TOPIC_ID",
+        "description": "Public topic id for the verify UI"
+      },
+      {
+        "key": "NEXT_PUBLIC_IPFS_GATEWAY_URL",
+        "description": "Public IPFS gateway URL shown in the UI"
+      },
+      {
+        "key": "NEXT_PUBLIC_HASHSCAN_BASE",
+        "description": "HashScan base URL (e.g. https://hashscan.io/testnet)"
+      }
+    ],
+    "outro": {
+      "sections": [
+        {
+          "steps": [
+            {
+              "text": "HCS-anchored IPFS document vault: bytes on IPFS, proof on Hedera Consensus Service. Without IPFS there is nowhere for bytes; without HCS there is no public tamper-evident proof."
+            }
+          ]
+        },
+        {
+          "title": "Next steps",
+          "steps": [
+            {
+              "label": "Copy environment files",
+              "command": "cp .env.example .env && cp packages/nextjs/.env.example packages/nextjs/.env.local"
+            },
+            {
+              "label": "Fund a testnet account",
+              "url": "https://portal.hedera.com/faucet"
+            },
+            {
+              "label": "Set HEDERA_ACCOUNT_ID and HEDERA_PRIVATE_KEY in .env",
+              "text": "Use the faucet account. Never commit .env."
+            },
+            {
+              "label": "Start local Kubo (IPFS) or point IPFS_API_URL at a reachable HTTP API",
+              "text": "Demo happy path: ipfs daemon (API on :5001). Dry-run: pass a precomputed CID to the attest API."
+            },
+            {
+              "label": "Create an HCS topic (optional if HCS_TOPIC_ID already set)",
+              "command": "{run:demo:topic}"
+            },
+            {
+              "label": "One-click demo attestation (writes HashScan-ready output)",
+              "command": "{run:demo:attest}"
+            },
+            {
+              "label": "Start the app",
+              "command": "{run:next:dev}"
+            },
+            {
+              "text": "See README.md and RUNBOOK.md for upload → attest → verify, optional HIP-336 pin fee, and the status table."
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

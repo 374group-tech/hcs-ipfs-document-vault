@@ -1,0 +1,52 @@
+# dependencies
+node_modules
+
+# yarn
+.yarn/*
+!.yarn/patches
+!.yarn/plugins
+!.yarn/releases
+!.yarn/sdks
+!.yarn/versions
+
+# eslint / prettier
+.eslintcache
+
+# misc
+.DS_Store
+*.log
+coverage
+dist
+.typechain
+cache
+artifacts
+deployments/localhost
+deployments/hardhat
+
+# local env — never commit secrets
+.env
+.env.local
+.env.*.local
+!.env.example
+
+# IDE
+.vscode
+.idea
+
+# Next.js
+packages/nextjs/.next
+packages/nextjs/out
+
+# Hardhat
+packages/hardhat/cache
+packages/hardhat/artifacts
+packages/hardhat/typechain-types
+packages/hardhat/coverage
+packages/hardhat/coverage.json
+
+# test / build
+*.tsbuildinfo
+
+.yarn/install-state.gz
+packages/*/node_modules
+
