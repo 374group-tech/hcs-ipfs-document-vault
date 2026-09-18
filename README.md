@@ -132,8 +132,8 @@ Honest status from this workspace (Asia/Yerevan). Do not claim commands you have
 | Unit tests | `yarn test` | **PASS** — 8 ledger + 3 Hardhat |
 | Build | `yarn build` | **PASS** — ledger + Hardhat compile + Next.js |
 | Local `create-scaffold-hbar` | `CREATE_SCAFFOLD_HBAR_TEMPLATE_DIR=… npx create-scaffold-hbar@0.4.0 … --skip-install` | **PASS** with isolated HOME git identity (CLI requires `user.name` / `user.email`) |
-| Create topic | `yarn demo:topic` | **TODO** — needs funded `HEDERA_*` in `.env` (no faucet keys on this box) |
-| Demo attest + HashScan | `yarn demo:attest` | **TODO** — paste URL after funded run: `https://hashscan.io/testnet/topic/<TOPIC>/<SEQ>` |
+| Create topic | `yarn demo:topic` | **PASS** — topic [`0.0.10600873`](https://hashscan.io/testnet/topic/0.0.10600873) |
+| Demo attest + HashScan | `yarn demo:attest` | **PASS** — seq 1 [`HashScan message`](https://hashscan.io/testnet/topic/0.0.10600873/1) · tx [`0.0.10600860@…`](https://hashscan.io/testnet/transaction/0.0.10600860%401789727716.782379131) (CID dry-run without local Kubo; HCS proof is live) |
 | App routes | `yarn next:start` smoke | **PASS** — `/`, `/upload`, `/verify` returned HTTP 200 |
 
 ## Local create-scaffold-hbar self-check
