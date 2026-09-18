@@ -55,3 +55,9 @@ export function getVaultEnv(): VaultEnv {
 export function pinFeeEnabled(env: VaultEnv = getVaultEnv()): boolean {
   return Boolean(env.pinTokenId && env.pinFeeAmount && env.pinTreasuryAccountId);
 }
+
+/** Native HBAR pin fee when PIN_TOKEN_ID is HBAR or 0.0.0 */
+export function pinFeeIsHbar(env: VaultEnv = getVaultEnv()): boolean {
+  const id = env.pinTokenId.trim().toUpperCase();
+  return id === "HBAR" || id === "0.0.0";
+}

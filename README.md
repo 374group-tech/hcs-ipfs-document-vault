@@ -134,7 +134,8 @@ Honest status from this workspace (Asia/Yerevan). Do not claim commands you have
 | Local `create-scaffold-hbar` | `CREATE_SCAFFOLD_HBAR_TEMPLATE_DIR=… npx create-scaffold-hbar@0.4.0 … --skip-install` | **PASS** with isolated HOME git identity (CLI requires `user.name` / `user.email`) |
 | Create topic | `yarn demo:topic` | **PASS** — topic [`0.0.10600873`](https://hashscan.io/testnet/topic/0.0.10600873) |
 | Local Kubo IPFS | `ipfs daemon` + API `:5001` | **PASS** — add source=`kubo` |
-| Demo attest + HashScan | `yarn demo:attest` | **PASS** — HCS seq [2](https://hashscan.io/testnet/topic/0.0.10600873/2) · live Kubo CID `bafkreiei5zxiksg2nytbmtmdhp6tguankwmdftrc6gqwvmct632ezbgrka` · [tx](https://hashscan.io/testnet/transaction/0.0.10600860%401789728309.737024106) (also seq 1 dry-run earlier) |
+| HBAR pin fee | `PIN_TOKEN_ID=HBAR` | **PASS** — 100000 tinybar → treasury [`0.0.10604200`](https://hashscan.io/testnet/account/0.0.10604200) · [transfer](https://hashscan.io/testnet/transaction/0.0.10600860%401789747920.746708423) |
+| Demo attest + HashScan | `yarn demo:attest` | **PASS** — HCS seq [3](https://hashscan.io/testnet/topic/0.0.10600873/3) · Kubo CID `bafkreif7ckqfqbizpthadxlizpgwlgujq6lv3uj26ef2bshy4n2kyd2yny` · [tx](https://hashscan.io/testnet/transaction/0.0.10600860%401789747921.086074708) |
 | App routes | `yarn next:start` smoke | **PASS** — `/`, `/upload`, `/verify` returned HTTP 200 |
 
 ## Local create-scaffold-hbar self-check

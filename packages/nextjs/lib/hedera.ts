@@ -17,7 +17,7 @@ import {
   hashScanTransactionUrl,
   type VaultAttestation,
 } from "@vault/ledger";
-import { getVaultEnv, pinFeeEnabled, type VaultEnv } from "./env";
+import { getVaultEnv, pinFeeEnabled, pinFeeIsHbar, type VaultEnv } from "./env";
 
 function parsePrivateKey(raw: string): PrivateKey {
   const trimmed = raw.trim();
@@ -105,15 +105,36 @@ async function maybePayPinFee(
   if (amount <= 0n) {
     throw new Error("PIN_FEE_AMOUNT must be a positive bigint string in base units");
   }
-  const tokenId = TokenId.fromString(env.pinTokenId);
   const treasury = AccountId.fromString(env.pinTreasuryAccountId);
   const payer = AccountId.fromString(env.accountId);
 
+  // Native HBAR pin fee (PIN_TOKEN_ID=HBAR|0.0.0): single CryptoTransfer payer → treasury.
+  if (pinFeeIsHbar(env)) {
+    const hbarAmount = Hbar.fromTinybars(amount.toString());
+    const transfer = await new TransferTransaction()
+      .addHbarTransfer(payer, hbarAmount.negated())
+      .addHbarTransfer(treasury, hbarAmount)
+      .freezeWith(client)
+      .execute(client);
+    const transferReceipt = await transfer.getReceipt(client);
+    if (transferReceipt.status !== Status.Success) {
+      throw new Error(`HBAR pin fee transfer failed: ${transferReceipt.status.toString()}`);
+    }
+    return {
+      enabled: true,
+      tokenId: "0.0.0",
+      amount: amount.toString(),
+      treasury: env.pinTreasuryAccountId,
+      transferTxId: transfer.transactionId.toString(),
+    };
+  }
+
+  const tokenId = TokenId.fromString(env.pinTokenId);
+
   // HIP-336: payer approves treasury (or contract) as spender for the pin amount.
   // Then a payer-signed CryptoTransfer moves tokens payer → treasury (non-custodial).
-  // When using PinFeeCollector, approve the contract EVM alias / use payPinToken instead.
   const spender = env.pinFeeContractAddress
-    ? AccountId.fromString(env.pinTreasuryAccountId) // allowance target documented as treasury/contract
+    ? AccountId.fromString(env.pinTreasuryAccountId)
     : treasury;
 
   const approve = await new AccountAllowanceApproveTransaction()
@@ -125,7 +146,6 @@ async function maybePayPinFee(
     throw new Error(`Allowance approve failed: ${approveReceipt.status.toString()}`);
   }
 
-  // Non-custodial: value leaves the payer and lands in treasury in one CryptoTransfer.
   const transfer = await new TransferTransaction()
     .addTokenTransfer(tokenId, payer, amount * -1n)
     .addTokenTransfer(tokenId, treasury, amount)
