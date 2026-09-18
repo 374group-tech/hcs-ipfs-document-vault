@@ -25,6 +25,12 @@ Repo (keep **private until 2026-09-21**, then public):
 - `node_modules`
 - Any Bitluma / AgentBazaar / other-team code
 
+## Local gate re-check (2026-09-18)
+
+- [x] `yarn lint` + `yarn build` PASS after HBAR pin-fee path
+- [x] `create-scaffold-hbar@0.4.0` from local template dir PASS (`CREATE_SCAFFOLD_HBAR_TEMPLATE_DIR=…`)
+- [ ] Official public-repo scaffold after 21.09: `npm create scaffold-hbar@latest --template 374group-tech/hcs-ipfs-document-vault`
+
 ## Proof already live
 
 | Item | Link |
