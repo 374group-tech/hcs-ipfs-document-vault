@@ -133,7 +133,8 @@ Honest status from this workspace (Asia/Yerevan). Do not claim commands you have
 | Build | `yarn build` | **PASS** — ledger + Hardhat compile + Next.js |
 | Local `create-scaffold-hbar` | `CREATE_SCAFFOLD_HBAR_TEMPLATE_DIR=… npx create-scaffold-hbar@0.4.0 … --skip-install` | **PASS** with isolated HOME git identity (CLI requires `user.name` / `user.email`) |
 | Create topic | `yarn demo:topic` | **PASS** — topic [`0.0.10600873`](https://hashscan.io/testnet/topic/0.0.10600873) |
-| Demo attest + HashScan | `yarn demo:attest` | **PASS** — seq 1 [`HashScan message`](https://hashscan.io/testnet/topic/0.0.10600873/1) · tx [`0.0.10600860@…`](https://hashscan.io/testnet/transaction/0.0.10600860%401789727716.782379131) (CID dry-run without local Kubo; HCS proof is live) |
+| Local Kubo IPFS | `ipfs daemon` + API `:5001` | **PASS** — add source=`kubo` |
+| Demo attest + HashScan | `yarn demo:attest` | **PASS** — HCS seq [2](https://hashscan.io/testnet/topic/0.0.10600873/2) · live Kubo CID `bafkreiei5zxiksg2nytbmtmdhp6tguankwmdftrc6gqwvmct632ezbgrka` · [tx](https://hashscan.io/testnet/transaction/0.0.10600860%401789728309.737024106) (also seq 1 dry-run earlier) |
 | App routes | `yarn next:start` smoke | **PASS** — `/`, `/upload`, `/verify` returned HTTP 200 |
 
 ## Local create-scaffold-hbar self-check
