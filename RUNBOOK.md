@@ -2,6 +2,8 @@
 
 Click-by-click path from zero to a HashScan attestation link.
 
+**Fast path:** see README **5-minute path** and [docs/DEMO.md](./docs/DEMO.md). This runbook is the longer ops checklist.
+
 ## 0. Machine setup
 
 1. Install Node ≥ 20.18.3.
