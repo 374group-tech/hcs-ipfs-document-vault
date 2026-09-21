@@ -12,9 +12,21 @@ Guidance for AI coding agents and humans extending this Scaffold-HBAR template.
 | `template.json` | create-scaffold-hbar manifest. `envVars` = `{key, description}` only. |
 | `.env.example` | Documented env — **never commit `.env`**. |
 
+## Ecosystem integration (rubric 35 pts)
+
+**IPFS = decentralised storage**, load-bearing for this template — not a decorative import.
+
+| Keep | Breaks if removed |
+| --- | --- |
+| IPFS holds document bytes → CID | No durable blob / CID; nowhere to put or fetch the file |
+| HCS attests `{cid, sha256, size, payer, memo, ts}` | No public, ordered, tamper-evident proof |
+| Mirror + HashScan verify; optional HIP-336 / native HBAR pin | (pin is optional; HCS+IPFS are not) |
+
+Flow: **upload → CID → sha256 → HCS attest → verify (Mirror/HashScan) + fetch from IPFS**. HashScan proofs live in README **Status & roadmap**.
+
 ## Non-negotiables
 
-1. **IPFS is load-bearing** — document bytes live on IPFS (or dry-run CID only for demos). Removing IPFS breaks the product.
+1. **IPFS is load-bearing** — bytes on IPFS (dry-run CID only for demos). Remove IPFS → product breaks; HCS alone only notarizes a hash.
 2. **HCS is load-bearing** — attestation JSON on a topic; Mirror Node for reads.
 3. **No custodial hop** — pin fees go payer → treasury/merchant, never through an intermediary wallet you control as escrow.
 4. **bigint for money** — no floats for HBAR/HTS amounts.
@@ -38,7 +50,7 @@ Guidance for AI coding agents and humans extending this Scaffold-HBAR template.
 - [ ] `yarn lint`, `yarn test`, `yarn build` green
 - [ ] App boots; `/upload` and `/verify` OK
 - [ ] One real testnet HCS submit with HashScan/Mirror link in README Status table
-- [ ] IPFS documented as required for bytes; dry-run CID path documented
+- [ ] IPFS documented as required decentralised-storage integration; README states what breaks without it; dry-run CID path documented
 
 ## Safe changes
 

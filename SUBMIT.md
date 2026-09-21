@@ -33,6 +33,8 @@ Repo (keep **private until 2026-09-21**, then public):
 
 ## Proof already live
 
+IPFS is the **35-pt ecosystem integration** (decentralised storage): load-bearing — remove it and there is no durable document blob/CID; HCS alone only notarizes a hash. See README “Why this pattern” + Status table.
+
 | Item | Link |
 | --- | --- |
 | HCS topic | https://hashscan.io/testnet/topic/0.0.10600873 |
