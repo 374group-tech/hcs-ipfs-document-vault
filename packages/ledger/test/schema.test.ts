@@ -5,7 +5,14 @@ import {
   serializeVaultAttestation,
 } from "../src/schema";
 import { fromBaseUnits, hbarToTinybar, toBaseUnits } from "../src/money";
-import { hashScanTopicMessageUrl, ipfsGatewayUrl } from "../src/hashscan";
+import {
+  hashScanTopicMessageUrl,
+  ipfsGatewayUrl,
+  mirrorNodeBase,
+  mirrorTopicMessagesUrl,
+  mirrorTopicMessageUrl,
+  formatConsensusTimestamp,
+} from "../src/hashscan";
 
 const sampleCid = "bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi";
 
@@ -69,5 +76,25 @@ describe("hashscan helpers", () => {
       "https://hashscan.io/testnet/topic/0.0.99/7",
     );
     expect(ipfsGatewayUrl(sampleCid)).toContain(sampleCid);
+  });
+});
+
+describe("mirror node helpers", () => {
+  it("builds list and single-message URLs", () => {
+    expect(mirrorNodeBase("testnet")).toBe("https://testnet.mirrornode.hedera.com");
+    expect(mirrorTopicMessagesUrl("0.0.99", { limit: 25, order: "asc" })).toBe(
+      "https://testnet.mirrornode.hedera.com/api/v1/topics/0.0.99/messages?limit=25&order=asc",
+    );
+    expect(mirrorTopicMessageUrl("0.0.99", 3, "testnet")).toBe(
+      "https://testnet.mirrornode.hedera.com/api/v1/topics/0.0.99/messages/3",
+    );
+    expect(
+      mirrorTopicMessageUrl("0.0.99", 3, "https://testnet.mirrornode.hedera.com/"),
+    ).toContain("/topics/0.0.99/messages/3");
+  });
+
+  it("formats consensus timestamps", () => {
+    expect(formatConsensusTimestamp("1700000000.000000000")).toBe("2023-11-14T22:13:20.000Z");
+    expect(formatConsensusTimestamp("not-a-ts")).toBe("not-a-ts");
   });
 });

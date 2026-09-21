@@ -139,7 +139,7 @@ Copy roots: `cp .env.example .env` and `cp packages/nextjs/.env.example packages
 1. **Upload** — client hashes sha256; bytes → IPFS HTTP API (or precomputed CID dry-run) → CID.
 2. **Attest** — `TopicMessageSubmit` with JSON `{cid, sha256, size, payer, memo, ts}`; UI shows sequence + HashScan `…/topic/<id>/<sequence>`.
 3. **Optional pin fee** — if `PIN_TOKEN_ID` set: native HBAR CryptoTransfer or HIP-336 allowance + transfer payer → treasury. Else free attest (network fee only).
-4. **Verify** — paste CID → Mirror Node topic messages → match (topic / seq / consensus timestamp) + HashScan + “Fetch from IPFS”.
+4. **Verify** — paste CID and/or sequence → Mirror Node (`/topics/{id}/messages` or `…/messages/{seq}`) → match with topic / seq / consensus timestamp + HashScan + “Fetch from IPFS”.
 5. **One-click demo** — `yarn demo:attest` / `npm run demo:attest -w @vault/nextjs`.
 
 ### IPFS notes (load-bearing)
@@ -161,7 +161,7 @@ Honest status from this workspace (Asia/Yerevan). Do not claim commands you have
 | `yarn install` | `yarn install` (Yarn 3.2.3) | **PASS** (2026-09-18) |
 | `npm install` | fresh copy `npm install` | **PASS** (2026-09-18; 1162 packages) |
 | Lint | `yarn lint` | **PASS** |
-| Unit tests | `yarn test` | **PASS** — 8 ledger + 3 Hardhat |
+| Unit tests | `yarn test` | **PASS** — 10 ledger + 3 Hardhat |
 | Build | `yarn build` | **PASS** — ledger + Hardhat compile + Next.js |
 | Local `create-scaffold-hbar` | `CREATE_SCAFFOLD_HBAR_TEMPLATE_DIR=… npx create-scaffold-hbar@0.4.0 … --skip-install` | **PASS** with isolated HOME git identity |
 | Create topic | `yarn demo:topic` | **PASS** — topic [`0.0.10600873`](https://hashscan.io/testnet/topic/0.0.10600873) |

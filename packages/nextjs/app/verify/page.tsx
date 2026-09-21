@@ -11,24 +11,46 @@ type Match = {
     memo: string;
     ts: number;
   };
+  topicId: string;
   sequenceNumber: number;
   consensusTimestamp: string;
+  consensusTimestampIso: string;
+  payerAccountId?: string;
+  runningHash?: string;
   hashScanUrl: string;
+  hashScanTopicUrl: string;
+  mirrorMessageUrl: string;
   ipfsGatewayUrl: string;
   raw: string;
 };
 
 type VerifyResponse = {
   topicId: string;
-  cid: string;
+  cid: string | null;
+  sequence: number | null;
+  mode: "sequence" | "scan";
   matchCount: number;
+  scannedCount: number;
   matches: Match[];
+  mirror?: {
+    baseUrl: string;
+    listUrl: string;
+    messageUrl: string | null;
+  };
+  hashScanTopicUrl?: string;
+  mismatch?: {
+    expectedCid: string;
+    foundCid: string;
+    sequenceNumber: number;
+    hashScanUrl: string;
+  };
   error?: string;
 };
 
 export default function VerifyPage() {
   const [cid, setCid] = useState("");
   const [topicId, setTopicId] = useState("");
+  const [sequence, setSequence] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<VerifyResponse | null>(null);
@@ -38,8 +60,10 @@ export default function VerifyPage() {
     setError(null);
     setResult(null);
     try {
-      const qs = new URLSearchParams({ cid: cid.trim() });
+      const qs = new URLSearchParams();
+      if (cid.trim()) qs.set("cid", cid.trim());
       if (topicId.trim()) qs.set("topicId", topicId.trim());
+      if (sequence.trim()) qs.set("sequence", sequence.trim());
       const res = await fetch(`/api/hcs/verify?${qs.toString()}`);
       const json = (await res.json()) as VerifyResponse;
       if (!res.ok) throw new Error(json.error || "verify failed");
@@ -51,12 +75,15 @@ export default function VerifyPage() {
     }
   }
 
+  const canSubmit = Boolean(cid.trim() || sequence.trim());
+
   return (
     <>
       <h1>Verify</h1>
       <p className="lead">
-        Paste a CID. The app reads the HCS topic via Mirror Node, shows matching attestation messages,
-        HashScan links, and a fetch-from-IPFS button.
+        Paste a CID (and optionally a sequence). The app fetches HCS messages from the{" "}
+        <strong>Mirror Node</strong>, shows topic / sequence / consensus timestamp, HashScan, and a
+        fetch-from-IPFS link.
       </p>
 
       <div className="card">
@@ -64,7 +91,7 @@ export default function VerifyPage() {
         <input
           id="cid"
           type="text"
-          placeholder="bafy… or Qm…"
+          placeholder="bafy… or Qm… (required unless sequence is set)"
           value={cid}
           onChange={(e) => setCid(e.target.value)}
         />
@@ -77,9 +104,18 @@ export default function VerifyPage() {
           value={topicId}
           onChange={(e) => setTopicId(e.target.value)}
         />
+        <div style={{ height: "0.85rem" }} />
+        <label htmlFor="seq">Sequence (optional — direct Mirror fetch)</label>
+        <input
+          id="seq"
+          type="text"
+          placeholder="e.g. 3 — GET /topics/{id}/messages/{seq}"
+          value={sequence}
+          onChange={(e) => setSequence(e.target.value)}
+        />
         <div style={{ height: "1rem" }} />
-        <button disabled={!cid.trim() || busy} onClick={onVerify}>
-          {busy ? "Scanning Mirror Node…" : "Verify on HCS"}
+        <button disabled={!canSubmit || busy} onClick={onVerify}>
+          {busy ? "Querying Mirror Node…" : "Verify on HCS"}
         </button>
       </div>
 
@@ -98,27 +134,116 @@ export default function VerifyPage() {
               <span className="err">No match</span>
             )}
           </h2>
-          <p className="muted">
-            Topic <span className="mono">{result.topicId}</span>
-          </p>
+          <dl className="meta">
+            <div>
+              <dt>Topic</dt>
+              <dd className="mono">{result.topicId}</dd>
+            </div>
+            <div>
+              <dt>Mode</dt>
+              <dd>
+                {result.mode === "sequence" ? "direct sequence fetch" : "scan recent messages"} ·
+                scanned {result.scannedCount}
+              </dd>
+            </div>
+            {result.cid && (
+              <div>
+                <dt>CID queried</dt>
+                <dd className="mono">{result.cid}</dd>
+              </div>
+            )}
+          </dl>
+          <div className="row" style={{ marginTop: "0.75rem" }}>
+            {result.hashScanTopicUrl && (
+              <a className="btn secondary" href={result.hashScanTopicUrl} target="_blank" rel="noreferrer">
+                HashScan topic
+              </a>
+            )}
+            {result.mirror?.listUrl && (
+              <a className="btn secondary" href={result.mirror.listUrl} target="_blank" rel="noreferrer">
+                Mirror messages JSON
+              </a>
+            )}
+          </div>
+
+          {result.mismatch && (
+            <p className="err" style={{ marginTop: "1rem" }}>
+              Sequence {result.mismatch.sequenceNumber} attests CID{" "}
+              <span className="mono">{result.mismatch.foundCid}</span>, not{" "}
+              <span className="mono">{result.mismatch.expectedCid}</span>.{" "}
+              <a href={result.mismatch.hashScanUrl} target="_blank" rel="noreferrer">
+                Open HashScan
+              </a>
+            </p>
+          )}
+
           {result.matches.map((m) => (
-            <div key={`${m.sequenceNumber}-${m.consensusTimestamp}`} style={{ marginTop: "1rem" }}>
-              <p>
-                Sequence <strong>{m.sequenceNumber}</strong> · {m.consensusTimestamp}
-              </p>
-              <p>
-                Payer <span className="mono">{m.attestation.payer}</span> · sha256{" "}
-                <span className="mono">{m.attestation.sha256}</span>
-              </p>
-              <div className="row">
+            <div
+              key={`${m.sequenceNumber}-${m.consensusTimestamp}`}
+              className="card"
+              style={{ marginTop: "1rem", background: "#0d1426" }}
+            >
+              <h2>
+                Seq <span className="ok">{m.sequenceNumber}</span>
+              </h2>
+              <dl className="meta">
+                <div>
+                  <dt>Topic</dt>
+                  <dd className="mono">{m.topicId}</dd>
+                </div>
+                <div>
+                  <dt>Sequence</dt>
+                  <dd className="mono">{m.sequenceNumber}</dd>
+                </div>
+                <div>
+                  <dt>Consensus timestamp</dt>
+                  <dd>
+                    <span className="mono">{m.consensusTimestamp}</span>
+                    {m.consensusTimestampIso && (
+                      <>
+                        <br />
+                        <span className="muted">{m.consensusTimestampIso}</span>
+                      </>
+                    )}
+                  </dd>
+                </div>
+                <div>
+                  <dt>Payer (message)</dt>
+                  <dd className="mono">{m.payerAccountId || m.attestation.payer}</dd>
+                </div>
+                <div>
+                  <dt>Attestation payer</dt>
+                  <dd className="mono">{m.attestation.payer}</dd>
+                </div>
+                <div>
+                  <dt>sha256</dt>
+                  <dd className="mono">{m.attestation.sha256}</dd>
+                </div>
+                <div>
+                  <dt>size / memo</dt>
+                  <dd>
+                    {m.attestation.size} bytes · {m.attestation.memo || "—"}
+                  </dd>
+                </div>
+                {m.runningHash && (
+                  <div>
+                    <dt>Running hash</dt>
+                    <dd className="mono">{m.runningHash}</dd>
+                  </div>
+                )}
+              </dl>
+              <div className="row" style={{ marginTop: "0.85rem" }}>
                 <a className="btn" href={m.hashScanUrl} target="_blank" rel="noreferrer">
                   Open HashScan
+                </a>
+                <a className="btn secondary" href={m.mirrorMessageUrl} target="_blank" rel="noreferrer">
+                  Mirror message JSON
                 </a>
                 <a className="btn secondary" href={m.ipfsGatewayUrl} target="_blank" rel="noreferrer">
                   Fetch from IPFS
                 </a>
               </div>
-              <pre>{m.raw}</pre>
+              <pre style={{ marginTop: "0.85rem" }}>{m.raw}</pre>
             </div>
           ))}
         </div>

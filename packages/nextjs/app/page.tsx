@@ -32,7 +32,8 @@ export default function HomePage() {
           <div className="step">
             <div className="n">3</div>
             <div>
-              <strong>Verify</strong> — paste CID, Mirror Node scan, match + fetch-from-IPFS.
+              <strong>Verify</strong> — paste CID (optional sequence), Mirror Node fetch, topic/seq/consensus
+              timestamp + HashScan + fetch-from-IPFS.
             </div>
           </div>
         </div>

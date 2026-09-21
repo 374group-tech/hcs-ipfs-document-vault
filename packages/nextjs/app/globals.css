@@ -92,3 +92,30 @@ pre {
   width: 2rem; height: 2rem; border-radius: 999px; display: grid; place-items: center;
   background: #243056; font-weight: 700; font-size: 0.85rem;
 }
+dl.meta {
+  display: grid;
+  gap: 0.55rem 1rem;
+  margin: 0.5rem 0 0;
+  grid-template-columns: 1fr;
+}
+@media (min-width: 640px) {
+  dl.meta { grid-template-columns: 1fr 1fr; }
+}
+dl.meta > div {
+  background: rgba(13, 20, 38, 0.65);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 0.55rem 0.7rem;
+}
+dl.meta dt {
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+  margin: 0 0 0.2rem;
+}
+dl.meta dd {
+  margin: 0;
+  font-size: 0.88rem;
+  line-height: 1.4;
+}

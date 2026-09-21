@@ -15,6 +15,8 @@ import {
   serializeVaultAttestation,
   hashScanTopicMessageUrl,
   hashScanTransactionUrl,
+  mirrorTopicMessagesUrl,
+  mirrorTopicMessageUrl,
   type VaultAttestation,
 } from "@vault/ledger";
 import { getVaultEnv, pinFeeEnabled, pinFeeIsHbar, type VaultEnv } from "./env";
@@ -233,13 +235,32 @@ export async function fetchTopicMessages(
   const env = getVaultEnv();
   const limit = opts.limit ?? 100;
   const order = opts.order ?? "desc";
-  const url = `${env.mirrorNodeUrl.replace(/\/$/, "")}/api/v1/topics/${topicId}/messages?limit=${limit}&order=${order}`;
+  const url = mirrorTopicMessagesUrl(topicId, {
+    networkOrUrl: env.mirrorNodeUrl,
+    limit,
+    order,
+  });
   const res = await fetch(url, { headers: { Accept: "application/json" } });
   if (!res.ok) {
     throw new Error(`Mirror Node error ${res.status}: ${await res.text()}`);
   }
   const data = (await res.json()) as { messages?: MirrorTopicMessage[] };
   return data.messages ?? [];
+}
+
+/** Fetch one HCS message by sequence via Mirror Node REST. */
+export async function fetchTopicMessageBySequence(
+  topicId: string,
+  sequenceNumber: string | number,
+): Promise<MirrorTopicMessage | null> {
+  const env = getVaultEnv();
+  const url = mirrorTopicMessageUrl(topicId, sequenceNumber, env.mirrorNodeUrl);
+  const res = await fetch(url, { headers: { Accept: "application/json" } });
+  if (res.status === 404) return null;
+  if (!res.ok) {
+    throw new Error(`Mirror Node error ${res.status}: ${await res.text()}`);
+  }
+  return (await res.json()) as MirrorTopicMessage;
 }
 
 export function decodeMirrorMessage(messageBase64: string): string {
