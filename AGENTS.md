@@ -10,8 +10,9 @@ Judges and developers follow the root README **5-minute path**. When changing sc
 cp .env.example .env          # HEDERA_ACCOUNT_ID + HEDERA_PRIVATE_KEY
 yarn install
 yarn demo:topic               # → HCS_TOPIC_ID
-ipfs daemon &                 # or DEMO_PRECOMPUTED_CID dry-run
-yarn demo:attest              # → sequence + HashScan URL
+ipfs daemon &                 # or DEMO_PRECOMPUTED_CID dry-run; or IPFS_PROVIDER=pinata + PINATA_JWT
+yarn demo:attest              # → sequence + HashScan URL (writes schema v1)
+yarn verify:proof <CID>    # Mirror Node match → exit 0/1
 yarn next:dev                 # /upload → /verify
 ```
 
@@ -23,8 +24,9 @@ Gate: `yarn lint && yarn test && yarn build`.
 | --- | --- |
 | `packages/ledger` | Pure TS: sha256, attestation schema, HashScan/Mirror/IPFS URLs, bigint money. **No network I/O.** |
 | `packages/hardhat` | Optional `PinFeeCollector.sol` + deploy/tests. Non-custodial pin fee sink. |
-| `packages/nextjs` | App Router UI (`/`, `/upload`, `/verify`), API routes, `demo:attest` / `demo:topic` scripts. |
+| `packages/nextjs` | App Router UI (`/`, `/upload`, `/verify`), API routes, `demo:attest` / `demo:topic` / `verify:proof` scripts. |
 | `docs/DEMO.md` | Judge-facing walkthrough + Mermaid + screenshot placeholders. |
+| `docs/SCHEMA.md` | HCS attestation schema v1 + legacy compatibility. |
 | `template.json` | create-scaffold-hbar manifest. `envVars` = `{key, description}` only. |
 | `.env.example` | Documented env — **never commit `.env`**. |
 
@@ -35,15 +37,15 @@ Gate: `yarn lint && yarn test && yarn build`.
 | Keep | Breaks if removed |
 | --- | --- |
 | IPFS holds document bytes → CID | No durable blob / CID; nowhere to put or fetch the file |
-| HCS attests `{cid, sha256, size, payer, memo, ts}` | No public, ordered, tamper-evident proof |
+| HCS attests schema-v1 `{schemaVersion, cid, sha256, size, payer, memo, ts, …}` | No public, ordered, tamper-evident proof |
 | Mirror + HashScan verify; optional HIP-336 / native HBAR pin | (pin is optional; HCS+IPFS are not) |
 
 Flow: **upload → CID → sha256 → HCS attest → verify (Mirror/HashScan) + fetch from IPFS**. HashScan proofs live in README **Status & roadmap**.
 
 ### IPFS (load-bearing — do not weaken)
 
-- Happy path: `POST /api/ipfs/add` → Kubo at `IPFS_API_URL`.
-- Dry-run CID (`DEMO_PRECOMPUTED_CID` / UI field) is **demo only**; production needs real bytes on IPFS.
+- Happy path: `POST /api/ipfs/add` → provider from `IPFS_PROVIDER` (`kubo` → `IPFS_API_URL`, or `pinata` → `PINATA_JWT`).
+- Dry-run CID (`DEMO_PRECOMPUTED_CID` / UI field) needs **no** provider; **demo only**; production needs real bytes on IPFS.
 - README and this file must keep stating: remove IPFS → product breaks (HCS alone only notarizes a hash of bytes it never held).
 
 ## Non-negotiables

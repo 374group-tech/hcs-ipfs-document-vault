@@ -1,6 +1,6 @@
 # HCS-anchored IPFS Document Vault
 
-> Scaffold-HBAR external template: upload a document to **IPFS**, attest `{cid, sha256, size, payer, memo, ts}` on a **Hedera Consensus Service** topic, optionally pay a non-custodial **HIP-336 / native HBAR pin fee**, and verify via Mirror Node + HashScan.
+> Scaffold-HBAR external template: upload a document to **IPFS**, attest schema-v1 `{schemaVersion, cid, sha256, size, payer, memo, ts, mime?, prevCid?}` on a **Hedera Consensus Service** topic, optionally pay a non-custodial **HIP-336 / native HBAR pin fee**, and verify via Mirror Node + HashScan.
 
 **Without IPFS there is nowhere for the bytes. Without HCS there is no public, tamper-evident proof.** Both are load-bearing.
 
@@ -38,13 +38,17 @@ yarn demo:attest             # IPFS add → HCS submit → HashScan URL
 DEMO_PRECOMPUTED_CID=bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi \
   yarn demo:attest
 
-# 3) UI: upload → attest → verify
+# 3) CLI verify (Mirror Node → match CID → HashScan)
+yarn verify:proof <CID>                 # uses HCS_TOPIC_ID from .env
+# yarn verify:proof <CID> --topic 0.0.x --sequence N
+
+# 4) UI: upload → attest → verify
 yarn next:dev                # http://localhost:3000
-#   /upload  — file or precomputed CID → IPFS → HCS
+#   /upload  — file or precomputed CID → IPFS → HCS (writes schema v1)
 #   /verify  — paste CID → Mirror Node match → HashScan + fetch IPFS
 ```
 
-npm equivalents: `npm run demo:topic -w @vault/nextjs`, `npm run demo:attest -w @vault/nextjs`, `npm run next:dev`.
+npm equivalents: `npm run demo:topic -w @vault/nextjs`, `npm run demo:attest -w @vault/nextjs`, `npm run verify:proof -w @vault/nextjs -- <CID>`, `npm run next:dev`.
 
 **Expected attest stdout:** `sequenceNumber=…` and  
 `https://hashscan.io/testnet/topic/<HCS_TOPIC_ID>/<sequence>`.
@@ -62,6 +66,8 @@ npm equivalents: `npm run demo:topic -w @vault/nextjs`, `npm run demo:attest -w 
 | **Mirror Node** | Read path for verify (no custom indexer). |
 | **Optional pin fee** | HIP-336 / native HBAR CryptoTransfer payer → treasury. |
 
+Attestation JSON is **schema v1** on write (`schemaVersion: 1`, optional `mime` / `prevCid` revision chain). Verify still accepts **legacy** messages without `schemaVersion`. Details: [docs/SCHEMA.md](./docs/SCHEMA.md).
+
 This is **not** an x402 S3 paywall, not a DEX checkout, and not a SaucerSwap merchant flow.
 
 ## Architecture (one-pager)
@@ -69,7 +75,7 @@ This is **not** an x402 S3 paywall, not a DEX checkout, and not a SaucerSwap mer
 ```mermaid
 flowchart LR
   User[Developer / User] --> UI[Next.js App Router]
-  UI -->|sha256 + bytes| IPFS[IPFS Kubo / gateway]
+  UI -->|sha256 + bytes| IPFS[IPFS Kubo / Pinata / gateway]
   IPFS -->|CID| UI
   UI -->|TopicMessageSubmit JSON| HCS[Hedera Consensus Service]
   UI -->|optional pin fee| Fee[HTS / HBAR → treasury]
@@ -111,8 +117,11 @@ Copy roots: `cp .env.example .env` and `cp packages/nextjs/.env.example packages
 | `HEDERA_NETWORK` | no | `testnet` (default) or `mainnet` |
 | `HCS_TOPIC_ID` | yes (attest/verify) | Topic for vault messages (`yarn demo:topic`) |
 | `HEDERA_MIRROR_NODE_URL` | no | Mirror REST (default public testnet/mainnet) |
-| `IPFS_API_URL` | happy path | Kubo HTTP API (default `http://127.0.0.1:5001`) |
+| `IPFS_PROVIDER` | no | `kubo` (default) or `pinata` |
+| `IPFS_API_URL` | happy path (kubo) | Kubo HTTP API (default `http://127.0.0.1:5001`) |
 | `IPFS_GATEWAY_URL` | no | Public fetch base (default `https://ipfs.io/ipfs`) |
+| `PINATA_JWT` | pinata | Pinata JWT — **never commit** |
+| `PINATA_API_KEY` / `PINATA_API_SECRET` | pinata alt | Legacy Pinata key pair if no JWT |
 | `PIN_TOKEN_ID` | no | `HBAR` / `0.0.0` or HTS id → pin fee; unset = free attest |
 | `PIN_FEE_AMOUNT` | no | Base units as bigint string (tinybars if HBAR) |
 | `PIN_TREASURY_ACCOUNT_ID` | no | Receives pin fee |
@@ -125,7 +134,8 @@ Copy roots: `cp .env.example .env` and `cp packages/nextjs/.env.example packages
 
 | Symptom | Cause | Fix |
 | --- | --- | --- |
-| `IPFS API unreachable` / upload fails | Kubo not running | Start `ipfs daemon`, or use **dry-run**: UI “precomputed CID” / `DEMO_PRECOMPUTED_CID=… yarn demo:attest` |
+| `IPFS API unreachable` / upload fails | Kubo not running | Start `ipfs daemon`, set `IPFS_PROVIDER=pinata` + `PINATA_JWT`, or use **dry-run**: UI “precomputed CID” / `DEMO_PRECOMPUTED_CID=… yarn demo:attest` |
+| `yarn verify:proof` → match=no | Wrong topic / lag / CID | Confirm `HCS_TOPIC_ID`; wait a few seconds after attest; try `--sequence N` |
 | `HEDERA_ACCOUNT_ID and HEDERA_PRIVATE_KEY are required` | Missing keys | Fill `.env` from [portal faucet](https://portal.hedera.com/faucet); never commit |
 | `Unable to parse HEDERA_PRIVATE_KEY` | Wrong key format | ECDSA or ED25519 hex/DER from portal; no quotes/spaces |
 | `HCS_TOPIC_ID is required` | No topic yet | `yarn demo:topic` then re-run attest |
@@ -136,18 +146,28 @@ Copy roots: `cp .env.example .env` and `cp packages/nextjs/.env.example packages
 
 ## Product behaviour
 
-1. **Upload** — client hashes sha256; bytes → IPFS HTTP API (or precomputed CID dry-run) → CID.
-2. **Attest** — `TopicMessageSubmit` with JSON `{cid, sha256, size, payer, memo, ts}`; UI shows sequence + HashScan `…/topic/<id>/<sequence>`.
+1. **Upload** — client hashes sha256; bytes → IPFS provider (`kubo` or `pinata`) or precomputed CID dry-run → CID.
+2. **Attest** — `TopicMessageSubmit` with schema-v1 JSON `{schemaVersion:1, cid, sha256, size, payer, memo, ts, mime?, prevCid?}`; UI shows sequence + HashScan `…/topic/<id>/<sequence>`.
 3. **Optional pin fee** — if `PIN_TOKEN_ID` set: native HBAR CryptoTransfer or HIP-336 allowance + transfer payer → treasury. Else free attest (network fee only).
-4. **Verify** — paste CID and/or sequence → Mirror Node (`/topics/{id}/messages` or `…/messages/{seq}`) → match with topic / seq / consensus timestamp + HashScan + “Fetch from IPFS”.
+4. **Verify** — `yarn verify:proof <CID>` or UI paste CID/sequence → Mirror Node → match (legacy + v1) with topic / seq / consensus timestamp + HashScan + “Fetch from IPFS”.
 5. **One-click demo** — `yarn demo:attest` / `npm run demo:attest -w @vault/nextjs`.
 
 ### IPFS notes (load-bearing)
 
-- Happy path: Next.js `POST /api/ipfs/add` pins to `IPFS_API_URL` (Kubo).
-- Dry-run: `precomputedCid` (UI) or `DEMO_PRECOMPUTED_CID` — demo only; production needs real bytes on IPFS.
-- Optional: public add endpoint via form field `publicAddUrl`.
+- Happy path: Next.js `POST /api/ipfs/add` uses `IPFS_PROVIDER` (`kubo` default → `IPFS_API_URL`, or `pinata` → `PINATA_JWT`).
+- Dry-run: `precomputedCid` (UI) or `DEMO_PRECOMPUTED_CID` — works with **no** provider; demo only; production needs real bytes on IPFS.
+- Optional: public add endpoint via form field `publicAddUrl` (legacy fallback).
 - **If IPFS is removed, the product breaks:** no durable document blob / CID. HCS alone only notarizes a hash of bytes it never held.
+
+### `yarn verify:proof`
+
+```bash
+yarn verify:proof bafy…                         # HCS_TOPIC_ID from .env
+yarn verify:proof bafy… --topic 0.0.10600873
+yarn verify:proof bafy… --topic 0.0.x --sequence 3
+```
+
+Prints `match=yes|no`, `sequence`, `consensusTimestamp`, `hashScanUrl`, `sha256` (and `schemaVersion` / `prevCid` when present). Exit `0` on match, `1` on no match / error.
 
 ## Status & roadmap
 

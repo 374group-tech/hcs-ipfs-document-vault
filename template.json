@@ -4,9 +4,16 @@
   "version": "0.1.0",
   "create-scaffold-hbar": {
     "capabilities": {
-      "frontend": ["nextjs-app"],
-      "solidityFramework": ["hardhat"],
-      "packageManager": ["yarn", "npm"]
+      "frontend": [
+        "nextjs-app"
+      ],
+      "solidityFramework": [
+        "hardhat"
+      ],
+      "packageManager": [
+        "yarn",
+        "npm"
+      ]
     },
     "defaults": {
       "frontend": "nextjs-app",
@@ -35,12 +42,28 @@
         "description": "Mirror Node REST base URL"
       },
       {
+        "key": "IPFS_PROVIDER",
+        "description": "IPFS backend: kubo (default local HTTP API) or pinata"
+      },
+      {
         "key": "IPFS_API_URL",
-        "description": "IPFS HTTP API (Kubo) base URL, default http://127.0.0.1:5001"
+        "description": "Kubo HTTP API base URL when IPFS_PROVIDER=kubo (default http://127.0.0.1:5001)"
       },
       {
         "key": "IPFS_GATEWAY_URL",
         "description": "Public IPFS gateway prefix for fetch links"
+      },
+      {
+        "key": "PINATA_JWT",
+        "description": "Pinata JWT when IPFS_PROVIDER=pinata. Never commit."
+      },
+      {
+        "key": "PINATA_API_KEY",
+        "description": "Optional Pinata API key (legacy; prefer PINATA_JWT)"
+      },
+      {
+        "key": "PINATA_API_SECRET",
+        "description": "Optional Pinata API secret (legacy; prefer PINATA_JWT)"
       },
       {
         "key": "PIN_TOKEN_ID",
@@ -112,11 +135,15 @@
               "command": "{run:demo:attest}"
             },
             {
+              "label": "Verify a CID against the HCS topic (Mirror Node)",
+              "command": "yarn verify:proof <CID>"
+            },
+            {
               "label": "Start the app",
               "command": "{run:next:dev}"
             },
             {
-              "text": "See README.md and RUNBOOK.md for upload → attest → verify, optional HIP-336 pin fee, and the status table."
+              "text": "See README.md and RUNBOOK.md for upload \u2192 attest \u2192 verify, optional HIP-336 pin fee, and the status table."
             }
           ]
         }

@@ -31,6 +31,13 @@ Repo (keep **private until 2026-09-21**, then public):
 - [x] `create-scaffold-hbar@0.4.0` from local template dir PASS (`CREATE_SCAFFOLD_HBAR_TEMPLATE_DIR=…`)
 - [x] Official public-repo scaffold after 21.09 (2026-09-21 PASS): `npm create scaffold-hbar@latest -- --template 374group-tech/hcs-ipfs-document-vault --yes --skip-hedera-skills --package-manager yarn --skip-install --frontend nextjs-app --solidity-framework hardhat --network testnet` then yarn install / hardhat compile / lint / build
 
+## CLI verify (after public)
+
+```bash
+yarn verify:proof bafkreif7ckqfqbizpthadxlizpgwlgujq6lv3uj26ef2bshy4n2kyd2yny --topic 0.0.10600873
+# expect match=yes, sequence, HashScan URL; exit 0
+```
+
 ## Proof already live
 
 IPFS is the **35-pt ecosystem integration** (decentralised storage): load-bearing — remove it and there is no durable document blob/CID; HCS alone only notarizes a hash. See README “Why this pattern” + Status table.
