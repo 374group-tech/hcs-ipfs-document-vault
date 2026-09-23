@@ -123,8 +123,8 @@
               "text": "Use the faucet account. Never commit .env."
             },
             {
-              "label": "Start local Kubo (IPFS) or point IPFS_API_URL at a reachable HTTP API",
-              "text": "Demo happy path: ipfs daemon (API on :5001). Dry-run: pass a precomputed CID to the attest API."
+              "label": "Start local Kubo (IPFS), or set IPFS_PROVIDER=pinata + PINATA_JWT",
+              "text": "Demo happy path: ipfs daemon (API on :5001). Alternate: Pinata. Dry-run: DEMO_PRECOMPUTED_CID / precomputed CID field."
             },
             {
               "label": "Create an HCS topic (optional if HCS_TOPIC_ID already set)",

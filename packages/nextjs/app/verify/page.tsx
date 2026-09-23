@@ -83,7 +83,8 @@ export default function VerifyPage() {
       <p className="lead">
         Paste a CID (and optionally a sequence). The app fetches HCS messages from the{" "}
         <strong>Mirror Node</strong>, shows topic / sequence / consensus timestamp, HashScan, and a
-        fetch-from-IPFS link.
+        fetch-from-IPFS link. Accepts <strong>schema v1</strong> and <strong>legacy</strong> attestations.
+        CLI: <code>yarn verify:proof &lt;CID&gt;</code> (same Mirror match; exit 0/1).
       </p>
 
       <div className="card">

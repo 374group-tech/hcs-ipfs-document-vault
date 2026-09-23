@@ -148,8 +148,10 @@ export default function UploadPage() {
         <div className="card">
           <p className="err">{error}</p>
           <p className="muted">
-            Tip: start Kubo (<code>ipfs daemon</code>) or pass a precomputed CID. Set{" "}
-            <code>HEDERA_*</code> and <code>HCS_TOPIC_ID</code> in <code>.env</code>.
+            Tip: start Kubo (<code>ipfs daemon</code>), set <code>IPFS_PROVIDER=pinata</code> +{" "}
+            <code>PINATA_JWT</code>, or pass a precomputed CID. Set <code>HEDERA_*</code> and{" "}
+            <code>HCS_TOPIC_ID</code> in <code>.env</code>. After attest, verify with{" "}
+            <code>yarn verify:proof &lt;CID&gt;</code>.
           </p>
         </div>
       )}

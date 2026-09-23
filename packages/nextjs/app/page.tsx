@@ -5,9 +5,10 @@ export default function HomePage() {
     <>
       <h1>HCS-anchored IPFS document vault</h1>
       <p className="lead">
-        Store document bytes on <strong>IPFS</strong>. Anchor the CID, sha256, size, and payer on a{" "}
-        <strong>Hedera Consensus Service</strong> topic so the proof is public and tamper-evident.
-        Optional HIP-336 pin fee (non-custodial). Without IPFS there is nowhere for the bytes; without
+        Store document bytes on <strong>IPFS</strong> (Kubo or Pinata). Anchor schema-v1{" "}
+        <code className="mono">{"{schemaVersion, cid, sha256, size, payer, memo, ts, mime?, prevCid?}"}</code>{" "}
+        on a <strong>Hedera Consensus Service</strong> topic so the proof is public and tamper-evident.
+        Optional non-custodial HBAR / HIP-336 pin fee. Without IPFS there is nowhere for the bytes; without
         HCS there is no on-chain proof.
       </p>
 
@@ -17,23 +18,22 @@ export default function HomePage() {
           <div className="step">
             <div className="n">1</div>
             <div>
-              <strong>Upload</strong> — client sha256, bytes → IPFS (local Kubo or documented public add),
-              receive CID.
+              <strong>Upload</strong> — client sha256, bytes → IPFS provider (`kubo` or `pinata`) or
+              precomputed CID dry-run, receive CID.
             </div>
           </div>
           <div className="step">
             <div className="n">2</div>
             <div>
-              <strong>Attest</strong> — HCS topic message{" "}
-              <code className="mono">{"{cid, sha256, size, payer, memo, ts}"}</code>; show sequence +
-              HashScan URL.
+              <strong>Attest</strong> — HCS topic message schema v1; show sequence + HashScan URL.
             </div>
           </div>
           <div className="step">
             <div className="n">3</div>
             <div>
-              <strong>Verify</strong> — paste CID (optional sequence), Mirror Node fetch, topic/seq/consensus
-              timestamp + HashScan + fetch-from-IPFS.
+              <strong>Verify</strong> — UI paste CID, or CLI{" "}
+              <code className="mono">yarn verify:proof &lt;CID&gt;</code> → Mirror Node match (legacy + v1)
+              + HashScan + fetch-from-IPFS.
             </div>
           </div>
         </div>
@@ -50,8 +50,9 @@ export default function HomePage() {
       <div className="card">
         <h2>One-click demo</h2>
         <p className="muted">
-          After faucet + <code>.env</code>: <code>yarn demo:topic</code> then{" "}
-          <code>yarn demo:attest</code> (npm: <code>npm run demo:attest -w @vault/nextjs</code>).
+          After faucet + <code>.env</code>: <code>yarn demo:topic</code> → <code>yarn demo:attest</code> →{" "}
+          <code>yarn verify:proof &lt;CID&gt;</code> (npm:{" "}
+          <code>npm run verify:proof -w @vault/nextjs -- &lt;CID&gt;</code>).
         </p>
       </div>
     </>

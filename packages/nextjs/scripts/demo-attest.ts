@@ -4,7 +4,7 @@
  *
  * Usage: yarn demo:attest
  * Env: HEDERA_ACCOUNT_ID, HEDERA_PRIVATE_KEY, HCS_TOPIC_ID
- * Optional: DEMO_PRECOMPUTED_CID to skip IPFS; IPFS_API_URL for Kubo
+ * Optional: DEMO_PRECOMPUTED_CID to skip IPFS; DEMO_PREV_CID / DEMO_MIME for schema v1; IPFS_API_URL for Kubo
  */
 import { createHash } from "node:crypto";
 import { addToIpfs } from "../lib/ipfs";
@@ -53,11 +53,16 @@ async function main() {
 
   console.log(`cid=${cid} source=${source}`);
 
+  const prevCid = process.env.DEMO_PREV_CID || undefined;
+  const mime = process.env.DEMO_MIME || "text/plain";
+
   const result = await submitAttestation({
     cid,
     sha256,
     size: sample.byteLength,
     memo: "demo:attest",
+    mime,
+    prevCid,
   });
 
   console.log("\n=== Attestation OK ===");
