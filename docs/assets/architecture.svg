@@ -1,0 +1,52 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="920" height="280" viewBox="0 0 920 280" role="img" aria-labelledby="title desc">
+  <title id="title">HCS-anchored IPFS Document Vault architecture</title>
+  <desc id="desc">User to Next.js to IPFS and HCS; verify via Mirror Node and HashScan</desc>
+  <defs>
+    <marker id="arrow" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#334155"/>
+    </marker>
+    <style>
+      .box { fill:#f8fafc; stroke:#0f766e; stroke-width:2; rx:8; }
+      .box2 { fill:#ecfdf5; stroke:#047857; stroke-width:2; rx:8; }
+      .box3 { fill:#eff6ff; stroke:#1d4ed8; stroke-width:2; rx:8; }
+      .lbl { font-family: system-ui, sans-serif; font-size:14px; fill:#0f172a; text-anchor:middle; }
+      .sub { font-family: system-ui, sans-serif; font-size:11px; fill:#475569; text-anchor:middle; }
+      .title { font-family: system-ui, sans-serif; font-size:16px; font-weight:600; fill:#0f172a; }
+    </style>
+  </defs>
+  <rect width="920" height="280" fill="#ffffff"/>
+  <text x="24" y="28" class="title">Architecture — IPFS (bytes) + HCS (proof) are load-bearing</text>
+
+  <rect class="box" x="40" y="60" width="120" height="56"/>
+  <text x="100" y="85" class="lbl">User / Dev</text>
+  <text x="100" y="102" class="sub">upload · verify</text>
+
+  <rect class="box" x="220" y="60" width="150" height="56"/>
+  <text x="295" y="85" class="lbl">Next.js App</text>
+  <text x="295" y="102" class="sub">/upload · /verify · APIs</text>
+
+  <rect class="box2" x="440" y="40" width="160" height="56"/>
+  <text x="520" y="65" class="lbl">IPFS</text>
+  <text x="520" y="82" class="sub">Kubo · Pinata · gateway</text>
+
+  <rect class="box3" x="440" y="120" width="160" height="56"/>
+  <text x="520" y="145" class="lbl">Hedera HCS</text>
+  <text x="520" y="162" class="sub">TopicMessageSubmit v1</text>
+
+  <rect class="box3" x="680" y="60" width="180" height="56"/>
+  <text x="770" y="85" class="lbl">Mirror + HashScan</text>
+  <text x="770" y="102" class="sub">verify:proof · topic/seq</text>
+
+  <rect class="box2" x="680" y="140" width="180" height="56"/>
+  <text x="770" y="165" class="lbl">Optional pin fee</text>
+  <text x="770" y="182" class="sub">native HBAR / HIP-336</text>
+
+  <line x1="160" y1="88" x2="220" y2="88" stroke="#334155" stroke-width="2" marker-end="url(#arrow)"/>
+  <line x1="370" y1="80" x2="440" y2="68" stroke="#334155" stroke-width="2" marker-end="url(#arrow)"/>
+  <line x1="370" y1="100" x2="440" y2="148" stroke="#334155" stroke-width="2" marker-end="url(#arrow)"/>
+  <line x1="600" y1="68" x2="680" y2="80" stroke="#334155" stroke-width="2" marker-end="url(#arrow)"/>
+  <line x1="600" y1="148" x2="680" y2="100" stroke="#334155" stroke-width="2" marker-end="url(#arrow)"/>
+  <line x1="600" y1="160" x2="680" y2="168" stroke="#94a3b8" stroke-width="1.5" stroke-dasharray="4 3" marker-end="url(#arrow)"/>
+
+  <text x="24" y="250" class="sub" style="text-anchor:start">Flow: bytes → IPFS CID → sha256 → HCS attest (schema v1) → Mirror/HashScan verify + fetch from IPFS. Remove IPFS → no blob. Remove HCS → no public proof.</text>
+</svg>

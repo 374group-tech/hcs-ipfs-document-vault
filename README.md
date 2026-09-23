@@ -5,7 +5,7 @@
 **Without IPFS there is nowhere for the bytes. Without HCS there is no public, tamper-evident proof.** Both are load-bearing.
 
 ```bash
-npm create scaffold-hbar@latest --template <YOUR_ORG>/<YOUR_REPO>
+npm create scaffold-hbar@latest --template 374group-tech/hcs-ipfs-document-vault
 ```
 
 (Local self-check with an absolute template dir is documented below.)
@@ -85,6 +85,8 @@ flowchart LR
   Verify -->|fetch CID| IPFS
 ```
 
+Static diagram: [docs/assets/architecture.svg](./docs/assets/architecture.svg) · screenshot checklist: [docs/assets/README.md](./docs/assets/README.md).
+
 **Composition:** upload bytes → IPFS CID → client `sha256` → `TopicMessageSubmit` → verify via Mirror Node (topic, sequence, consensus timestamp) + HashScan (+ fetch blob from IPFS). Live proofs: [Status & roadmap](#status--roadmap).
 
 ## Monorepo layout
@@ -94,10 +96,23 @@ packages/
   ledger/    Pure helpers: sha256, attestation schema, HashScan/Mirror/IPFS URLs, bigint money
   hardhat/   Optional PinFeeCollector (non-custodial HBAR / ERC20-style pin fee)
   nextjs/    App Router UI + API routes + yarn demo:attest
-docs/        DEMO.md walkthrough · SCHEMA.md attestation schema v1
+docs/        DEMO.md · SCHEMA.md · assets/architecture.svg + screenshot checklist
 ```
 
 Package manager: **Yarn 3.2.3** workspaces **and** npm. Internal deps use `"@vault/ledger": "*"`, not `workspace:*`. Node **≥ 20.18.3**.
+
+## Package scripts (root)
+
+| Script | What it does |
+| --- | --- |
+| `yarn lint` / `yarn test` / `yarn build` | Gate across `ledger` + `hardhat` + `nextjs` |
+| `yarn next:dev` | App Router UI (`/`, `/upload`, `/verify`) |
+| `yarn demo:topic` | Create HCS topic → writes `HCS_TOPIC_ID` |
+| `yarn demo:attest` | IPFS add → HCS schema-v1 submit → HashScan URL |
+| `yarn verify:proof <CID>` | Mirror Node match (legacy + v1); exit 0/1 |
+| `yarn hardhat:compile` / `yarn hardhat:test` / `yarn hardhat:deploy` | Optional `PinFeeCollector` |
+
+Workspace equivalents: `npm run <script>` or `npm run <script> -w @vault/nextjs` for nextjs-only scripts.
 
 ## Prerequisites
 
@@ -184,13 +199,13 @@ Honest status from this workspace (Asia/Yerevan). Do not claim commands you have
 | Lint | `yarn lint` | **PASS** (2026-09-23) |
 | Unit tests | `yarn test` | **PASS** (2026-09-23) — ledger + Hardhat + nextjs |
 | Build | `yarn build` | **PASS** (2026-09-23) — ledger + Hardhat compile + Next.js |
-| Local `create-scaffold-hbar` | `CREATE_SCAFFOLD_HBAR_TEMPLATE_DIR=… npx create-scaffold-hbar@0.4.0 … --skip-install` | **PASS** with isolated HOME git identity |
+| Local `create-scaffold-hbar` | `CREATE_SCAFFOLD_HBAR_TEMPLATE_DIR=… npx create-scaffold-hbar@0.4.0 … --skip-install` | **PASS** (2026-09-23 Asia/Yerevan) with isolated HOME git identity |
 | Create topic | `yarn demo:topic` | **PASS** — topic [`0.0.10600873`](https://hashscan.io/testnet/topic/0.0.10600873) |
 | Local Kubo IPFS | `ipfs daemon` + API `:5001` | **PASS** — add source=`kubo` |
 | HBAR pin fee | `PIN_TOKEN_ID=HBAR` | **PASS** — 100000 tinybar → treasury [`0.0.10604200`](https://hashscan.io/testnet/account/0.0.10604200) · [transfer](https://hashscan.io/testnet/transaction/0.0.10600860%401789747920.746708423) |
 | Demo attest (legacy) | `yarn demo:attest` | **PASS** (2026-09-18) — HCS seq [3](https://hashscan.io/testnet/topic/0.0.10600873/3) · Kubo CID `bafkreif7ckqfqbizpthadxlizpgwlgujq6lv3uj26ef2bshy4n2kyd2yny` · [tx](https://hashscan.io/testnet/transaction/0.0.10600860%401789747921.086074708) |
 | Schema v1 attest + `prevCid` | `DEMO_PREV_CID=… yarn demo:attest` | **PASS** (2026-09-23 Asia/Yerevan) — HCS seq [4](https://hashscan.io/testnet/topic/0.0.10600873/4) · Kubo CID `bafkreic5ywzvohvo6kbiuym2q57omcfruwgfrbekfip73h33jqjdolgdaq` · `schemaVersion=1` · [tx](https://hashscan.io/testnet/transaction/0.0.10600860%401790146030.930645533) |
-| CLI verify | `yarn verify:proof <CID> --topic 0.0.10600873 --sequence N` | **PASS** — seq 4 → `schemaVersion=1`; seq 3 → `schemaVersion=legacy`; exit 0 |
+| CLI verify | `yarn verify:proof <CID> --topic 0.0.10600873 --sequence N` | **PASS** (re-checked 2026-09-23) — seq 4 → `schemaVersion=1`; seq 3 → `schemaVersion=legacy`; exit 0 |
 | App routes | `yarn next:start` smoke | **PASS** — `/`, `/upload`, `/verify` returned HTTP 200 |
 
 ## Local create-scaffold-hbar self-check

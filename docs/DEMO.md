@@ -66,8 +66,23 @@ sequenceDiagram
 | 4. CLI verify | `![cli](./assets/04-verify-proof.png)` | `yarn verify:proof` stdout `match=yes` |
 | 5. HashScan | `![hashscan](./assets/05-hashscan.png)` | Topic message page on testnet |
 
-Create `docs/assets/` when you add real PNGs. Until then, the Mermaid diagram + live HashScan links in the root README **Status & roadmap** are enough for judges.
+PNG captures are optional — see [assets/README.md](./assets/README.md). Until then, Mermaid + [architecture.svg](./assets/architecture.svg) + README Status HashScan links are enough for judges.
 
-## Live proof (reference)
+## Exact judge path (live proofs)
 
-See README **Status & roadmap** — schema v1 seq **4** and legacy seq **3** on topic `0.0.10600873`.
+Use the public topic and CIDs already attested on testnet (see README Status). No faucet keys required for verify.
+
+```bash
+# Schema v1 (seq 4) — expect match=yes, schemaVersion=1, prevCid set
+yarn verify:proof bafkreic5ywzvohvo6kbiuym2q57omcfruwgfrbekfip73h33jqjdolgdaq \
+  --topic 0.0.10600873 --sequence 4
+
+# Legacy (seq 3) — expect match=yes, schemaVersion=legacy
+yarn verify:proof bafkreif7ckqfqbizpthadxlizpgwlgujq6lv3uj26ef2bshy4n2kyd2yny \
+  --topic 0.0.10600873 --sequence 3
+```
+
+HashScan: [seq 4 (schema v1)](https://hashscan.io/testnet/topic/0.0.10600873/4) · [seq 3 (legacy)](https://hashscan.io/testnet/topic/0.0.10600873/3) · [topic](https://hashscan.io/testnet/topic/0.0.10600873).
+
+Architecture diagram (no screenshots required): [assets/architecture.svg](./assets/architecture.svg). Screenshot checklist: [assets/README.md](./assets/README.md).
+

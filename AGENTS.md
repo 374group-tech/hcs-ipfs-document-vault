@@ -40,7 +40,8 @@ Gate: `yarn lint && yarn test && yarn build`.
 | `packages/ledger` | Pure TS: sha256, attestation schema, HashScan/Mirror/IPFS URLs, bigint money. **No network I/O.** |
 | `packages/hardhat` | Optional `PinFeeCollector.sol` + deploy/tests. Non-custodial pin fee sink. |
 | `packages/nextjs` | App Router UI (`/`, `/upload`, `/verify`), API routes, `demo:attest` / `demo:topic` / `verify:proof` scripts. |
-| `docs/DEMO.md` | Judge-facing walkthrough + Mermaid + screenshot placeholders. |
+| `docs/DEMO.md` | Judge-facing walkthrough + Mermaid + exact `verify:proof` on seq 4/3. |
+| `docs/assets/` | `architecture.svg` + screenshot capture checklist (`README.md`). |
 | `docs/SCHEMA.md` | HCS attestation schema v1 + legacy compatibility. |
 | `template.json` | create-scaffold-hbar manifest. `envVars` = `{key, description}` only. |
 | `.env.example` | Documented env — **never commit `.env`**. |
@@ -95,6 +96,7 @@ Flow: **upload → CID → sha256 → HCS attest → verify (Mirror/HashScan / C
 - [ ] `yarn lint`, `yarn test`, `yarn build` green
 - [ ] App boots; `/upload` and `/verify` OK; `yarn verify:proof` documented
 - [ ] One real testnet HCS submit with HashScan/Mirror link in README Status table
+- [ ] [SUBMIT.md](./SUBMIT.md) paste-ready Project Name / Description / Any other links
 - [ ] IPFS documented as required decentralised-storage integration; dry-run CID path documented
 
 ## Safe changes
