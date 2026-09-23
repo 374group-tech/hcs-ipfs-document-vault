@@ -174,6 +174,8 @@ export async function submitAttestation(params: {
   size: number;
   memo?: string;
   topicId?: string;
+  mime?: string;
+  prevCid?: string;
 }): Promise<AttestResult> {
   const env = getVaultEnv();
   const topicId = params.topicId || env.topicId;
@@ -186,6 +188,8 @@ export async function submitAttestation(params: {
     payer: env.accountId,
     memo: params.memo ?? "vault-attest",
     ts: Date.now(),
+    mime: params.mime,
+    prevCid: params.prevCid,
   });
   const body = serializeVaultAttestation(attestation);
 

@@ -10,7 +10,9 @@
     "format": "prettier --write \"app/**/*.{ts,tsx,css}\" \"lib/**/*.ts\" \"scripts/**/*.ts\"",
     "check-types": "tsc --noEmit",
     "demo:attest": "tsx --env-file=../../.env scripts/demo-attest.ts",
-    "demo:topic": "tsx --env-file=../../.env scripts/demo-topic.ts"
+    "demo:topic": "tsx --env-file=../../.env scripts/demo-topic.ts",
+    "verify:proof": "tsx scripts/verify-proof.ts",
+    "test": "vitest run --config vitest.config.ts"
   },
   "dependencies": {
     "@hashgraph/sdk": "^2.60.0",
@@ -28,7 +30,8 @@
     "eslint-config-next": "^14.2.18",
     "prettier": "^3.3.3",
     "tsx": "^4.19.2",
-    "typescript": "^5.6.3"
+    "typescript": "^5.6.3",
+    "vitest": "^2.1.4"
   },
   "engines": {
     "node": ">=20.18.3"

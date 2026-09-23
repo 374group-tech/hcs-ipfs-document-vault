@@ -34,6 +34,7 @@ export default function UploadPage() {
   const [file, setFile] = useState<File | null>(null);
   const [precomputedCid, setPrecomputedCid] = useState("");
   const [memo, setMemo] = useState("vault-attest");
+  const [prevCid, setPrevCid] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [addResult, setAddResult] = useState<AddResponse | null>(null);
@@ -80,6 +81,8 @@ export default function UploadPage() {
           sha256: addJson.sha256 || sha256,
           size: addJson.size || size,
           memo,
+          mime: file?.type || undefined,
+          prevCid: prevCid.trim() || undefined,
         }),
       });
       const attestJson = (await attestRes.json()) as AttestResponse;
@@ -119,6 +122,15 @@ export default function UploadPage() {
         <div style={{ height: "0.85rem" }} />
         <label htmlFor="memo">Memo</label>
         <input id="memo" type="text" value={memo} onChange={(e) => setMemo(e.target.value)} />
+        <div style={{ height: "0.85rem" }} />
+        <label htmlFor="prevCid">Previous CID (optional revision chain)</label>
+        <input
+          id="prevCid"
+          type="text"
+          placeholder="bafy… — links this attestation to a prior document CID"
+          value={prevCid}
+          onChange={(e) => setPrevCid(e.target.value.trim())}
+        />
         <div style={{ height: "1rem" }} />
         <button disabled={!canSubmit || busy} onClick={onUploadAndAttest}>
           {busy ? "Working…" : "Upload → IPFS → HCS attest"}

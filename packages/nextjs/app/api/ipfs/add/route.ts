@@ -5,11 +5,12 @@ import { addToIpfs, gatewayUrlFor } from "@/lib/ipfs";
 export const runtime = "nodejs";
 
 /**
- * POST multipart file → IPFS (Kubo HTTP API) → { cid, sha256, size, gatewayUrl }
+ * POST multipart file → IPFS (kubo|pinata via IPFS_PROVIDER) → { cid, sha256, size, gatewayUrl }
  * Optional form fields:
- *  - precomputedCid: dry-run without IPFS
- *  - publicAddUrl: alternate public add endpoint
+ *  - precomputedCid: dry-run without IPFS (no provider required)
+ *  - publicAddUrl: alternate public add endpoint (legacy fallback)
  */
+
 export async function POST(req: NextRequest) {
   try {
     const form = await req.formData();
@@ -41,10 +42,16 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    const mimeType =
+      file && typeof file !== "string" && "type" in file && file.type
+        ? String(file.type)
+        : undefined;
+
     const added = await addToIpfs(bytes, {
       filename,
       precomputedCid: precomputedCid || undefined,
       publicAddUrl,
+      mimeType,
     });
 
     return NextResponse.json({

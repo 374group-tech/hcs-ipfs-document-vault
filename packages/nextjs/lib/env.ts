@@ -14,6 +14,11 @@ export type VaultEnv = {
   mirrorNodeUrl: string;
   ipfsApiUrl: string;
   ipfsGatewayUrl: string;
+  /** kubo (default) | pinata */
+  ipfsProvider: string;
+  pinataJwt: string;
+  pinataApiKey: string;
+  pinataApiSecret: string;
   pinTokenId: string;
   pinFeeAmount: string;
   pinTreasuryAccountId: string;
@@ -38,6 +43,10 @@ export function getVaultEnv(): VaultEnv {
       process.env.IPFS_GATEWAY_URL ||
       process.env.NEXT_PUBLIC_IPFS_GATEWAY_URL ||
       "https://ipfs.io/ipfs",
+    ipfsProvider: process.env.IPFS_PROVIDER || "kubo",
+    pinataJwt: process.env.PINATA_JWT || "",
+    pinataApiKey: process.env.PINATA_API_KEY || "",
+    pinataApiSecret: process.env.PINATA_API_SECRET || "",
     pinTokenId: process.env.PIN_TOKEN_ID || process.env.NEXT_PUBLIC_PIN_TOKEN_ID || "",
     pinFeeAmount: process.env.PIN_FEE_AMOUNT || process.env.NEXT_PUBLIC_PIN_FEE_AMOUNT || "",
     pinTreasuryAccountId:

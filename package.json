@@ -11,7 +11,7 @@
   "scripts": {
     "lint": "yarn workspace @vault/ledger lint && yarn workspace @vault/hardhat lint && yarn workspace @vault/nextjs lint",
     "format": "yarn workspace @vault/ledger format && yarn workspace @vault/hardhat format && yarn workspace @vault/nextjs format",
-    "test": "yarn workspace @vault/ledger test && yarn workspace @vault/hardhat test",
+    "test": "yarn workspace @vault/ledger test && yarn workspace @vault/hardhat test && yarn workspace @vault/nextjs test",
     "build": "yarn workspace @vault/ledger build && yarn hardhat:compile && yarn next:build",
     "hardhat:compile": "yarn workspace @vault/hardhat compile",
     "hardhat:test": "yarn workspace @vault/hardhat test",
@@ -26,7 +26,8 @@
     "next:format": "yarn workspace @vault/nextjs format",
     "demo:attest": "yarn workspace @vault/nextjs demo:attest",
     "demo:topic": "yarn workspace @vault/nextjs demo:topic",
-    "postinstall": "husky || true"
+    "postinstall": "husky || true",
+    "verify:proof": "yarn workspace @vault/nextjs verify:proof"
   },
   "packageManager": "yarn@3.2.3",
   "devDependencies": {
