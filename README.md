@@ -30,9 +30,9 @@ yarn lint && yarn test && yarn build
 # 1) Create HCS topic (funded testnet account from portal faucet)
 yarn demo:topic              # prints + writes HCS_TOPIC_ID=0.0.…
 
-# 2a) Happy path — local Kubo holds the bytes
+# 2a) Happy path — local Kubo (or IPFS_PROVIDER=pinata + PINATA_JWT)
 ipfs daemon &                # API http://127.0.0.1:5001
-yarn demo:attest             # IPFS add → HCS submit → HashScan URL
+yarn demo:attest             # IPFS add → HCS submit schema v1 → HashScan URL
 
 # 2b) Dry-run — HCS-only with a precomputed CID (no Kubo)
 DEMO_PRECOMPUTED_CID=bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi \
@@ -94,7 +94,7 @@ packages/
   ledger/    Pure helpers: sha256, attestation schema, HashScan/Mirror/IPFS URLs, bigint money
   hardhat/   Optional PinFeeCollector (non-custodial HBAR / ERC20-style pin fee)
   nextjs/    App Router UI + API routes + yarn demo:attest
-docs/        DEMO.md walkthrough for judges
+docs/        DEMO.md walkthrough · SCHEMA.md attestation schema v1
 ```
 
 Package manager: **Yarn 3.2.3** workspaces **and** npm. Internal deps use `"@vault/ledger": "*"`, not `workspace:*`. Node **≥ 20.18.3**.
@@ -104,7 +104,7 @@ Package manager: **Yarn 3.2.3** workspaces **and** npm. Internal deps use `"@vau
 1. Node.js ≥ 20.18.3
 2. Yarn 3.2.3 via `.yarn/releases/yarn-3.2.3.cjs` (or Corepack)
 3. Hedera testnet account + HBAR from the [portal faucet](https://portal.hedera.com/faucet)
-4. Local [Kubo](https://docs.ipfs.tech/install/command-line/) (`ipfs daemon`, API `127.0.0.1:5001`) **or** a precomputed CID for dry-run
+4. Local [Kubo](https://docs.ipfs.tech/install/command-line/) (`ipfs daemon`, API `127.0.0.1:5001`), **or** `IPFS_PROVIDER=pinata` + `PINATA_JWT`, **or** a precomputed CID for dry-run
 
 ## Env table
 
@@ -134,7 +134,8 @@ Copy roots: `cp .env.example .env` and `cp packages/nextjs/.env.example packages
 
 | Symptom | Cause | Fix |
 | --- | --- | --- |
-| `IPFS API unreachable` / upload fails | Kubo not running | Start `ipfs daemon`, set `IPFS_PROVIDER=pinata` + `PINATA_JWT`, or use **dry-run**: UI “precomputed CID” / `DEMO_PRECOMPUTED_CID=… yarn demo:attest` |
+| `IPFS API unreachable` / Kubo upload fails | Kubo not running or wrong `IPFS_API_URL` | Start `ipfs daemon` (API `127.0.0.1:5001`) or use dry-run CID |
+| Pinata pin / auth fails | Missing or invalid Pinata creds | Set `IPFS_PROVIDER=pinata` and `PINATA_JWT` (never commit); or switch back to Kubo / dry-run |
 | `yarn verify:proof` → match=no | Wrong topic / lag / CID | Confirm `HCS_TOPIC_ID`; wait a few seconds after attest; try `--sequence N` |
 | `HEDERA_ACCOUNT_ID and HEDERA_PRIVATE_KEY are required` | Missing keys | Fill `.env` from [portal faucet](https://portal.hedera.com/faucet); never commit |
 | `Unable to parse HEDERA_PRIVATE_KEY` | Wrong key format | ECDSA or ED25519 hex/DER from portal; no quotes/spaces |
@@ -173,21 +174,23 @@ Prints `match=yes|no`, `sequence`, `consensusTimestamp`, `hashScanUrl`, `sha256`
 
 Honest status from this workspace (Asia/Yerevan). Do not claim commands you have not run.
 
-**Judge-facing HashScan proofs (IPFS CID + HCS attest + optional HBAR pin):** topic [`0.0.10600873`](https://hashscan.io/testnet/topic/0.0.10600873) · seq [3](https://hashscan.io/testnet/topic/0.0.10600873/3) (CID `bafkreif7ckqfqbizpthadxlizpgwlgujq6lv3uj26ef2bshy4n2kyd2yny`) · pin [transfer](https://hashscan.io/testnet/transaction/0.0.10600860%401789747920.746708423). Full table below.
+**Judge-facing HashScan proofs (IPFS + HCS + optional HBAR pin):** topic [`0.0.10600873`](https://hashscan.io/testnet/topic/0.0.10600873) · **schema v1** seq [4](https://hashscan.io/testnet/topic/0.0.10600873/4) (CID `bafkreic5ywzvohvo6kbiuym2q57omcfruwgfrbekfip73h33jqjdolgdaq`, `prevCid` → legacy) · **legacy** seq [3](https://hashscan.io/testnet/topic/0.0.10600873/3) · pin [transfer](https://hashscan.io/testnet/transaction/0.0.10600860%401789747920.746708423). Both validate via `yarn verify:proof`. Full table below.
 
 | Milestone | Command | Result |
 | --- | --- | --- |
 | Template tree | — | Present at repo root (`packages/ledger`, `hardhat`, `nextjs`) |
 | `yarn install` | `yarn install` (Yarn 3.2.3) | **PASS** (2026-09-18) |
 | `npm install` | fresh copy `npm install` | **PASS** (2026-09-18; 1162 packages) |
-| Lint | `yarn lint` | **PASS** |
-| Unit tests | `yarn test` | **PASS** — 10 ledger + 3 Hardhat |
-| Build | `yarn build` | **PASS** — ledger + Hardhat compile + Next.js |
+| Lint | `yarn lint` | **PASS** (2026-09-23) |
+| Unit tests | `yarn test` | **PASS** (2026-09-23) — ledger + Hardhat + nextjs |
+| Build | `yarn build` | **PASS** (2026-09-23) — ledger + Hardhat compile + Next.js |
 | Local `create-scaffold-hbar` | `CREATE_SCAFFOLD_HBAR_TEMPLATE_DIR=… npx create-scaffold-hbar@0.4.0 … --skip-install` | **PASS** with isolated HOME git identity |
 | Create topic | `yarn demo:topic` | **PASS** — topic [`0.0.10600873`](https://hashscan.io/testnet/topic/0.0.10600873) |
 | Local Kubo IPFS | `ipfs daemon` + API `:5001` | **PASS** — add source=`kubo` |
 | HBAR pin fee | `PIN_TOKEN_ID=HBAR` | **PASS** — 100000 tinybar → treasury [`0.0.10604200`](https://hashscan.io/testnet/account/0.0.10604200) · [transfer](https://hashscan.io/testnet/transaction/0.0.10600860%401789747920.746708423) |
-| Demo attest + HashScan | `yarn demo:attest` | **PASS** — HCS seq [3](https://hashscan.io/testnet/topic/0.0.10600873/3) · Kubo CID `bafkreif7ckqfqbizpthadxlizpgwlgujq6lv3uj26ef2bshy4n2kyd2yny` · [tx](https://hashscan.io/testnet/transaction/0.0.10600860%401789747921.086074708) |
+| Demo attest (legacy) | `yarn demo:attest` | **PASS** (2026-09-18) — HCS seq [3](https://hashscan.io/testnet/topic/0.0.10600873/3) · Kubo CID `bafkreif7ckqfqbizpthadxlizpgwlgujq6lv3uj26ef2bshy4n2kyd2yny` · [tx](https://hashscan.io/testnet/transaction/0.0.10600860%401789747921.086074708) |
+| Schema v1 attest + `prevCid` | `DEMO_PREV_CID=… yarn demo:attest` | **PASS** (2026-09-23 Asia/Yerevan) — HCS seq [4](https://hashscan.io/testnet/topic/0.0.10600873/4) · Kubo CID `bafkreic5ywzvohvo6kbiuym2q57omcfruwgfrbekfip73h33jqjdolgdaq` · `schemaVersion=1` · [tx](https://hashscan.io/testnet/transaction/0.0.10600860%401790146030.930645533) |
+| CLI verify | `yarn verify:proof <CID> --topic 0.0.10600873 --sequence N` | **PASS** — seq 4 → `schemaVersion=1`; seq 3 → `schemaVersion=legacy`; exit 0 |
 | App routes | `yarn next:start` smoke | **PASS** — `/`, `/upload`, `/verify` returned HTTP 200 |
 
 ## Local create-scaffold-hbar self-check
@@ -224,3 +227,5 @@ MIT — see [LICENSE](./LICENSE).
 - [HashScan testnet](https://hashscan.io/testnet)
 - [Kubo / IPFS](https://docs.ipfs.tech/)
 - [Demo walkthrough](./docs/DEMO.md)
+- [Attestation schema](./docs/SCHEMA.md)
+- [Submission checklist](./SUBMIT.md)

@@ -45,3 +45,10 @@ history — each attest is append-only.
 
 See README **Why this pattern** and `@vault/ledger` `parseVaultAttestation` /
 `serializeVaultAttestation`.
+
+## Demo helpers
+
+- New writes always go through `serializeVaultAttestation` / `buildVaultAttestation` (schema v1).
+- CLI: `DEMO_PREV_CID=<priorCid> DEMO_MIME=text/plain yarn demo:attest` sets optional revision fields.
+- Verify: `yarn verify:proof <CID>` prints `schemaVersion=1` or `schemaVersion=legacy`.
+

@@ -8,7 +8,7 @@ Click-by-click path from zero to a HashScan attestation link.
 
 1. Install Node ≥ 20.18.3.
 2. From the repo root, Yarn is already pinned: `.yarn/releases/yarn-3.2.3.cjs`.
-3. Optional: install Kubo and run `ipfs daemon` (API `http://127.0.0.1:5001`).
+3. IPFS: install Kubo and run `ipfs daemon` (API `http://127.0.0.1:5001`), **or** set `IPFS_PROVIDER=pinata` + `PINATA_JWT`, **or** use a precomputed CID dry-run.
 
 ## 1. Install
 
@@ -69,7 +69,19 @@ npm equivalent:
 npm run demo:attest -w @vault/nextjs
 ```
 
-## 5. Run the UI
+## 5. Verify proof (CLI)
+
+After attest (wait a few seconds for Mirror lag):
+
+```bash
+yarn verify:proof <CID>                 # uses HCS_TOPIC_ID from .env
+yarn verify:proof <CID> --topic 0.0.x --sequence N
+```
+
+Expect `match=yes`, `sequence`, `consensusTimestamp`, `hashScanUrl`, `sha256`. Schema v1 messages also print `schemaVersion` / `mime` / `prevCid`. Exit `0` on match, `1` otherwise. Accepts **legacy** messages without `schemaVersion`.
+
+## 6. Run the UI
+
 
 ```bash
 yarn next:dev
@@ -80,7 +92,7 @@ yarn next:dev
 3. Note the sequence number and HashScan links
 4. **Verify** — paste the CID → Verify on HCS → open HashScan / Fetch from IPFS
 
-## 6. Optional pin fee
+## 7. Optional pin fee
 
 1. Create or choose an HTS fungible token on testnet.
 2. Associate payer + treasury as needed.
@@ -103,7 +115,7 @@ yarn hardhat:test
 yarn hardhat:deploy --network hederaTestnet
 ```
 
-## 7. Lint / test / build gate
+## 8. Lint / test / build gate
 
 ```bash
 yarn lint
@@ -113,17 +125,19 @@ yarn build
 
 All three should exit 0 before submission.
 
-## 8. Troubleshooting
+## 9. Troubleshooting
 
 | Symptom | Fix |
 | --- | --- |
-| `IPFS API unreachable` | Start `ipfs daemon` or use precomputed CID / `DEMO_PRECOMPUTED_CID` |
+| `IPFS API unreachable` (Kubo) | Start `ipfs daemon`, check `IPFS_API_URL=http://127.0.0.1:5001` |
+| Pinata auth / pin fails | Set `IPFS_PROVIDER=pinata` and `PINATA_JWT` (never commit); or use Kubo / dry-run CID |
+| `yarn verify:proof` → match=no | Confirm topic; wait for Mirror lag; try `--sequence N` |
 | `HCS_TOPIC_ID is required` | `yarn demo:topic` |
 | `Unable to parse HEDERA_PRIVATE_KEY` | Use ECDSA or ED25519 hex/DER from the portal; no quotes |
 | Mirror verify empty | Wait a few seconds after submit; confirm topic id |
 | npm workspace resolve fails | Ensure deps use `"@vault/ledger": "*"` and workspaces listed in root `package.json` |
 
-## 9. Eligibility reminders
+## 10. Eligibility reminders
 
 - MIT licence, original work, no committed secrets
 - At least one verifiable testnet tx (HashScan or Mirror link in README)

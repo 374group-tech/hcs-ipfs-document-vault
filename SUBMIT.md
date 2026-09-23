@@ -1,57 +1,70 @@
 # Submission checklist (Scaffold-HBAR Template Bounty)
 
-Repo (keep **private until 2026-09-21**, then public):
+Repo (public):
 `https://github.com/374group-tech/hcs-ipfs-document-vault`
 
-## Before submit (after 21.09.2026)
+**HEAD features:** `yarn verify:proof` · dual IPFS (`kubo` | `pinata`) · attestation **schema v1** (`schemaVersion`, optional `mime` / `prevCid`) with legacy verify · optional non-custodial HBAR pin fee.
 
-1. [x] Make the GitHub repo **public** (confirmed 2026-09-21)
-2. [x] Confirm MIT `LICENSE` is present (GitHub license=MIT)
-3. [x] Re-run fresh scaffold (2026-09-21 PASS):
-   ```bash
-   npm create scaffold-hbar@latest --template 374group-tech/hcs-ipfs-document-vault
-   ```
-4. [x] From a fresh scaffold: install + compile + lint + build PASS (2026-09-21); routes `/` `/upload` `/verify` in Next build output
-5. [ ] Paste HashScan proof (already in README Status):
-   - Topic: https://hashscan.io/testnet/topic/0.0.10600873
-   - Message seq 3: https://hashscan.io/testnet/topic/0.0.10600873/3
-6. [ ] Fill Hedera **dev-ex survey** (link from bounty submit form)
-7. [ ] Optional AMA: 2026-09-29 10:00 ET
-8. [ ] Submit before **2026-10-04 23:59 ET** (= 2026-10-05 07:59 Yerevan)
+## Official submit (live as of 2026-09-23)
+
+1. Open https://hedera.com/scaffold-hbar-template-bounty/
+2. Click **Submit your project** → Google Form (Bounty prefilled = Scaffold HBAR Template):
+   https://docs.google.com/forms/d/e/1FAIpQLSfMrExu3tI95KP9WlwtS9JFka5iy3uWOi8vVK4JqpLbd0FTPA/viewform?usp=pp_url&entry.1760747509=Scaffold+HBAR+Template
+3. Registration (name/email) remains at `#form` on the same page if not done yet.
+
+**Deadline:** before **2026-10-04 23:59 ET** (= **2026-10-05 07:59 Asia/Yerevan**). AMA optional: 2026-09-29 10:00 ET.
+
+### Form fields (founder)
+
+| Field | What to paste |
+| --- | --- |
+| GitHub URL | `https://github.com/374group-tech/hcs-ipfs-document-vault` |
+| Any other links | HashScan topic message (schema v1): https://hashscan.io/testnet/topic/0.0.10600873/4 · legacy seq 3: https://hashscan.io/testnet/topic/0.0.10600873/3 · pin fee: https://hashscan.io/testnet/transaction/0.0.10600860%401789747920.746708423 |
+| Video demo | Short screencast: upload → attest → verify (UI and/or `yarn verify:proof`) |
+| Dev-ex survey | Link from the submit form / bounty page — complete when submitting |
+
+## Code-side checklist (done)
+
+1. [x] GitHub repo **public** + MIT `LICENSE`
+2. [x] Fresh scaffold PASS (2026-09-21): `npm create scaffold-hbar@latest --template 374group-tech/hcs-ipfs-document-vault`
+3. [x] Fresh install + lint + build PASS; routes `/` `/upload` `/verify`
+4. [x] HashScan proofs in README Status (schema v1 seq **4** + legacy seq **3** + pin fee)
+5. [x] `yarn verify:proof` CLI + dual IPFS + schema v1 on write / legacy verify
+6. [ ] Paste GitHub + HashScan into Google Form (**founder**)
+7. [ ] Video demo (**founder**)
+8. [ ] Dev-ex survey (**founder**)
+9. [ ] Optional AMA 2026-09-29
+10. [ ] Submit before deadline
 
 ## Do not submit
 
-- `.env` / private keys
+- `.env` / private keys / `PINATA_JWT`
 - `node_modules`
-- Any Bitluma / AgentBazaar / other-team code
+- SaucerSwap / merchant / Bitluma / AgentBazaar / CDRAM / invoices / cloned official built-in templates
 
-## Local gate re-check (2026-09-18)
+## Local gate re-check
 
-- [x] `yarn lint` + `yarn build` PASS after HBAR pin-fee path
-- [x] `create-scaffold-hbar@0.4.0` from local template dir PASS (`CREATE_SCAFFOLD_HBAR_TEMPLATE_DIR=…`)
-- [x] Official public-repo scaffold after 21.09 (2026-09-21 PASS): `npm create scaffold-hbar@latest -- --template 374group-tech/hcs-ipfs-document-vault --yes --skip-hedera-skills --package-manager yarn --skip-install --frontend nextjs-app --solidity-framework hardhat --network testnet` then yarn install / hardhat compile / lint / build
+- [x] `yarn lint` + `yarn test` + `yarn build` (re-run on polish day)
+- [x] `create-scaffold-hbar@0.4.0` from local template dir PASS
+- [x] Official public-repo scaffold after 21.09 (2026-09-21 PASS)
 
-## CLI verify (after public)
+## CLI verify (judges / self-check)
 
 ```bash
-yarn verify:proof bafkreif7ckqfqbizpthadxlizpgwlgujq6lv3uj26ef2bshy4n2kyd2yny --topic 0.0.10600873
-# expect match=yes, sequence, HashScan URL; exit 0
+# Schema v1 (seq 4) — expect schemaVersion=1, prevCid, match=yes
+yarn verify:proof bafkreic5ywzvohvo6kbiuym2q57omcfruwgfrbekfip73h33jqjdolgdaq --topic 0.0.10600873 --sequence 4
+
+# Legacy (seq 3) — expect schemaVersion=legacy, match=yes
+yarn verify:proof bafkreif7ckqfqbizpthadxlizpgwlgujq6lv3uj26ef2bshy4n2kyd2yny --topic 0.0.10600873 --sequence 3
 ```
 
 ## Proof already live
 
-IPFS is the **35-pt ecosystem integration** (decentralised storage): load-bearing — remove it and there is no durable document blob/CID; HCS alone only notarizes a hash. See README “Why this pattern” + Status table.
+IPFS is the **35-pt ecosystem integration** (decentralised storage): load-bearing — remove it and there is no durable document blob/CID. See README “Why this pattern” + Status table.
 
 | Item | Link |
 | --- | --- |
 | HCS topic | https://hashscan.io/testnet/topic/0.0.10600873 |
-| IPFS+HCS+pin attest | https://hashscan.io/testnet/topic/0.0.10600873/3 |
+| Schema v1 attest (seq 4) | https://hashscan.io/testnet/topic/0.0.10600873/4 |
+| Legacy attest (seq 3) | https://hashscan.io/testnet/topic/0.0.10600873/3 |
 | Pin fee transfer | https://hashscan.io/testnet/transaction/0.0.10600860%401789747920.746708423 |
-
-## Official public scaffold gate (2026-09-21 Asia/Yerevan)
-
-- Repo public + MIT: PASS
-- `npm create scaffold-hbar@latest --template 374group-tech/hcs-ipfs-document-vault` (with `--yes --solidity-framework hardhat`; CLI otherwise probes Foundry): PASS
-- Fresh `yarn install` + `yarn hardhat:compile` + `yarn lint` + `yarn build`: PASS
-- Note: bare `yarn lint` before first compile failed on missing `typechain-types`; hardhat `lint` script now runs `hardhat compile` first so install→lint→build is clean.
-- Submit/register URL live today: registration form only at https://hedera.com/scaffold-hbar-template-bounty/#form (First Name, Last Name, Email, marketing consent). Full submit form (repo URL + HashScan + dev-ex survey) is described in the brief but **no separate submit form URL is published yet** as of 2026-09-21.
