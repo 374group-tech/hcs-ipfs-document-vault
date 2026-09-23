@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  ATTESTATION_SCHEMA_VERSION,
   buildVaultAttestation,
   parseVaultAttestation,
   serializeVaultAttestation,
@@ -13,27 +14,103 @@ import {
   mirrorTopicMessageUrl,
   formatConsensusTimestamp,
 } from "../src/hashscan";
+import {
+  decodeHcsMessageBase64,
+  findCidMatches,
+  matchFromMirrorMessage,
+} from "../src/verify";
 
 const sampleCid = "bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi";
+const sampleSha = "2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824";
+const prevCid = "bafkreif7ckqfqbizpthadxlizpgwlgujq6lv3uj26ef2bshy4n2kyd2yny";
 
 describe("vault attestation schema", () => {
-  it("round-trips a valid message", () => {
+  it("round-trips a valid message (writes schema v1)", () => {
     const att = buildVaultAttestation({
       cid: sampleCid,
-      sha256: "2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824",
+      sha256: sampleSha,
       size: 5,
       payer: "0.0.1234",
       memo: "demo",
       ts: 1_700_000_000_000,
     });
+    expect(att.schemaVersion).toBe(ATTESTATION_SCHEMA_VERSION);
     const json = serializeVaultAttestation(att);
+    expect(JSON.parse(json).schemaVersion).toBe(1);
     const parsed = parseVaultAttestation(json);
     expect(parsed.ok).toBe(true);
     if (parsed.ok) {
       expect(parsed.value.cid).toBe(sampleCid);
       expect(parsed.value.payer).toBe("0.0.1234");
       expect(parsed.value.size).toBe(5);
+      expect(parsed.value.schemaVersion).toBe(1);
     }
+  });
+
+  it("accepts legacy messages without schemaVersion", () => {
+    const legacy = {
+      cid: sampleCid,
+      sha256: sampleSha,
+      size: 5,
+      payer: "0.0.1234",
+      memo: "legacy",
+      ts: 1_700_000_000_000,
+    };
+    const parsed = parseVaultAttestation(legacy);
+    expect(parsed.ok).toBe(true);
+    if (parsed.ok) {
+      expect(parsed.value.schemaVersion).toBeUndefined();
+      expect(parsed.value.cid).toBe(sampleCid);
+    }
+  });
+
+  it("accepts schema v1 with optional mime and prevCid", () => {
+    const parsed = parseVaultAttestation({
+      schemaVersion: 1,
+      cid: sampleCid,
+      sha256: sampleSha,
+      size: 10,
+      payer: "0.0.99",
+      memo: "rev",
+      ts: 1_700_000_000_001,
+      mime: "application/pdf",
+      prevCid,
+    });
+    expect(parsed.ok).toBe(true);
+    if (parsed.ok) {
+      expect(parsed.value.mime).toBe("application/pdf");
+      expect(parsed.value.prevCid).toBe(prevCid);
+      expect(parsed.value.schemaVersion).toBe(1);
+    }
+    const json = serializeVaultAttestation(
+      buildVaultAttestation({
+        cid: sampleCid,
+        sha256: sampleSha,
+        size: 10,
+        payer: "0.0.99",
+        memo: "rev",
+        mime: "application/pdf",
+        prevCid,
+        ts: 1_700_000_000_001,
+      }),
+    );
+    const again = JSON.parse(json);
+    expect(again.mime).toBe("application/pdf");
+    expect(again.prevCid).toBe(prevCid);
+    expect(again.schemaVersion).toBe(1);
+  });
+
+  it("rejects unsupported schemaVersion", () => {
+    const r = parseVaultAttestation({
+      schemaVersion: 99,
+      cid: sampleCid,
+      sha256: sampleSha,
+      size: 1,
+      payer: "0.0.1",
+      memo: "",
+      ts: 1,
+    });
+    expect(r.ok).toBe(false);
   });
 
   it("rejects bad sha256", () => {
@@ -51,7 +128,7 @@ describe("vault attestation schema", () => {
   it("rejects bad payer", () => {
     const r = parseVaultAttestation({
       cid: sampleCid,
-      sha256: "2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824",
+      sha256: sampleSha,
       size: 1,
       payer: "alice",
       memo: "",
@@ -96,5 +173,76 @@ describe("mirror node helpers", () => {
   it("formats consensus timestamps", () => {
     expect(formatConsensusTimestamp("1700000000.000000000")).toBe("2023-11-14T22:13:20.000Z");
     expect(formatConsensusTimestamp("not-a-ts")).toBe("not-a-ts");
+  });
+});
+
+describe("verify proof helpers (mock mirror)", () => {
+  const legacyBody = JSON.stringify({
+    cid: sampleCid,
+    sha256: sampleSha,
+    size: 5,
+    payer: "0.0.1234",
+    memo: "legacy",
+    ts: 1_700_000_000_000,
+  });
+  const v1Body = JSON.stringify({
+    schemaVersion: 1,
+    cid: sampleCid,
+    sha256: sampleSha,
+    size: 5,
+    payer: "0.0.1234",
+    memo: "v1",
+    ts: 1_700_000_000_001,
+    mime: "text/plain",
+    prevCid,
+  });
+  const otherBody = JSON.stringify({
+    cid: prevCid,
+    sha256: sampleSha,
+    size: 1,
+    payer: "0.0.1",
+    memo: "",
+    ts: 1,
+  });
+
+  it("decodes base64 and matches legacy + v1 by cid", () => {
+    const messages = [
+      {
+        sequence_number: 1,
+        consensus_timestamp: "1700000000.000000000",
+        topic_id: "0.0.99",
+        message: Buffer.from(otherBody, "utf8").toString("base64"),
+      },
+      {
+        sequence_number: 2,
+        consensus_timestamp: "1700000001.000000000",
+        topic_id: "0.0.99",
+        message: Buffer.from(legacyBody, "utf8").toString("base64"),
+      },
+      {
+        sequence_number: 3,
+        consensus_timestamp: "1700000002.000000000",
+        topic_id: "0.0.99",
+        message: Buffer.from(v1Body, "utf8").toString("base64"),
+      },
+    ];
+    expect(decodeHcsMessageBase64(messages[1].message)).toContain(sampleCid);
+    const matches = findCidMatches(messages, sampleCid, { topicId: "0.0.99", network: "testnet" });
+    expect(matches).toHaveLength(2);
+    expect(matches[0].sequenceNumber).toBe(2);
+    expect(matches[0].attestation.schemaVersion).toBeUndefined();
+    expect(matches[1].sequenceNumber).toBe(3);
+    expect(matches[1].attestation.schemaVersion).toBe(1);
+    expect(matches[1].attestation.prevCid).toBe(prevCid);
+    expect(matches[1].hashScanUrl).toBe("https://hashscan.io/testnet/topic/0.0.99/3");
+  });
+
+  it("returns null for non-attestation payloads", () => {
+    const junk = {
+      sequence_number: 9,
+      consensus_timestamp: "1.0",
+      message: Buffer.from("not-json", "utf8").toString("base64"),
+    };
+    expect(matchFromMirrorMessage(junk, { topicId: "0.0.1" })).toBeNull();
   });
 });

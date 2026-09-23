@@ -1,13 +1,23 @@
 import { isSha256Hex } from "./hash";
 
-/** On-chain HCS attestation payload for a vaulted document. */
+/** Current on-write attestation schema version. Legacy messages omit schemaVersion. */
+export const ATTESTATION_SCHEMA_VERSION = 1 as const;
+
+/**
+ * On-chain HCS attestation payload for a vaulted document.
+ * - Legacy (pre-v1): no `schemaVersion`; fields cid/sha256/size/payer/memo/ts only.
+ * - Schema v1: `schemaVersion: 1` plus optional `mime` and `prevCid` (revision chain).
+ */
 export type VaultAttestation = {
+  schemaVersion?: typeof ATTESTATION_SCHEMA_VERSION;
   cid: string;
   sha256: string;
   size: number;
   payer: string;
   memo: string;
   ts: number;
+  mime?: string;
+  prevCid?: string;
 };
 
 const CID_RE = /^(Qm[1-9A-HJ-NP-Za-km-z]{44}|bafy[a-z2-7]{50,}|bafk[a-z2-7]{50,})$/i;
@@ -29,7 +39,7 @@ export type ParseAttestationResult =
   | { ok: true; value: VaultAttestation }
   | { ok: false; error: string };
 
-/** Validate and normalize an HCS message body (JSON string or object). */
+/** Validate and normalize an HCS message body (JSON string or object). Accepts legacy + schema v1. */
 export function parseVaultAttestation(input: unknown): ParseAttestationResult {
   let raw: unknown = input;
   if (typeof input === "string") {
@@ -69,37 +79,68 @@ export function parseVaultAttestation(input: unknown): ParseAttestationResult {
     return { ok: false, error: "ts must be a positive unix epoch (ms or s)" };
   }
 
-  return {
-    ok: true,
-    value: {
-      cid,
-      sha256: sha256.toLowerCase(),
-      size,
-      payer,
-      memo,
-      ts,
-    },
+  // schemaVersion: absent = legacy; if present must be 1
+  let schemaVersion: typeof ATTESTATION_SCHEMA_VERSION | undefined;
+  if ("schemaVersion" in o && o.schemaVersion !== undefined && o.schemaVersion !== null) {
+    if (o.schemaVersion !== 1 && o.schemaVersion !== "1") {
+      return { ok: false, error: "unsupported schemaVersion (expected 1 or omitted)" };
+    }
+    schemaVersion = ATTESTATION_SCHEMA_VERSION;
+  }
+
+  let mime: string | undefined;
+  if ("mime" in o && o.mime !== undefined && o.mime !== null) {
+    if (typeof o.mime !== "string" || o.mime.length > 200) {
+      return { ok: false, error: "mime must be a short string when present" };
+    }
+    if (o.mime.length > 0) mime = o.mime;
+  }
+
+  let prevCid: string | undefined;
+  if ("prevCid" in o && o.prevCid !== undefined && o.prevCid !== null && o.prevCid !== "") {
+    if (typeof o.prevCid !== "string" || !isLikelyCid(o.prevCid)) {
+      return { ok: false, error: "prevCid missing or invalid when present" };
+    }
+    prevCid = o.prevCid;
+  }
+
+  const value: VaultAttestation = {
+    cid,
+    sha256: sha256.toLowerCase(),
+    size,
+    payer,
+    memo,
+    ts,
   };
+  if (schemaVersion !== undefined) value.schemaVersion = schemaVersion;
+  if (mime !== undefined) value.mime = mime;
+  if (prevCid !== undefined) value.prevCid = prevCid;
+
+  return { ok: true, value };
 }
 
-/** Serialize attestation for HCS TopicMessageSubmit (compact JSON). */
+/** Serialize attestation for HCS TopicMessageSubmit (compact JSON, schema v1 on write). */
 export function serializeVaultAttestation(attestation: VaultAttestation): string {
   const parsed = parseVaultAttestation(attestation);
   if (!parsed.ok) {
     throw new Error(parsed.error);
   }
   const v = parsed.value;
-  return JSON.stringify({
+  const out: Record<string, unknown> = {
+    schemaVersion: ATTESTATION_SCHEMA_VERSION,
     cid: v.cid,
     sha256: v.sha256,
     size: v.size,
     payer: v.payer,
     memo: v.memo,
     ts: v.ts,
-  });
+  };
+  if (v.mime) out.mime = v.mime;
+  if (v.prevCid) out.prevCid = v.prevCid;
+  return JSON.stringify(out);
 }
 
-/** Build a new attestation object (validates on serialize). */
+/** Build a new attestation object (always schema v1 on write; validates on serialize). */
 export function buildVaultAttestation(params: {
   cid: string;
   sha256: string;
@@ -107,8 +148,11 @@ export function buildVaultAttestation(params: {
   payer: string;
   memo?: string;
   ts?: number;
+  mime?: string;
+  prevCid?: string;
 }): VaultAttestation {
   const value: VaultAttestation = {
+    schemaVersion: ATTESTATION_SCHEMA_VERSION,
     cid: params.cid,
     sha256: params.sha256.toLowerCase(),
     size: params.size,
@@ -116,6 +160,8 @@ export function buildVaultAttestation(params: {
     memo: params.memo ?? "",
     ts: params.ts ?? Date.now(),
   };
+  if (params.mime) value.mime = params.mime;
+  if (params.prevCid) value.prevCid = params.prevCid;
   const parsed = parseVaultAttestation(value);
   if (!parsed.ok) throw new Error(parsed.error);
   return parsed.value;
