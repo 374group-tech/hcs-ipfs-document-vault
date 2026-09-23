@@ -136,7 +136,92 @@ describe("vault attestation schema", () => {
     });
     expect(r.ok).toBe(false);
   });
+
+  it("rejects invalid JSON string", () => {
+    const r = parseVaultAttestation("{not-json");
+    expect(r.ok).toBe(false);
+    if (!r.ok) expect(r.error).toMatch(/not valid JSON/);
+  });
+
+  it("rejects non-object / missing cid / negative size / bad prevCid", () => {
+    expect(parseVaultAttestation(null).ok).toBe(false);
+    expect(parseVaultAttestation([]).ok).toBe(false);
+    expect(
+      parseVaultAttestation({
+        sha256: sampleSha,
+        size: 1,
+        payer: "0.0.1",
+        memo: "",
+        ts: 1,
+      }).ok,
+    ).toBe(false);
+    expect(
+      parseVaultAttestation({
+        cid: sampleCid,
+        sha256: sampleSha,
+        size: -1,
+        payer: "0.0.1",
+        memo: "",
+        ts: 1,
+      }).ok,
+    ).toBe(false);
+    expect(
+      parseVaultAttestation({
+        cid: sampleCid,
+        sha256: sampleSha,
+        size: 1.5,
+        payer: "0.0.1",
+        memo: "",
+        ts: 1,
+      }).ok,
+    ).toBe(false);
+    expect(
+      parseVaultAttestation({
+        schemaVersion: 1,
+        cid: sampleCid,
+        sha256: sampleSha,
+        size: 1,
+        payer: "0.0.1",
+        memo: "",
+        ts: 1,
+        prevCid: "!!not-a-cid!!",
+      }).ok,
+    ).toBe(false);
+  });
+
+  it("normalizes sha256 case and omits empty mime; accepts schemaVersion string '1'", () => {
+    const parsed = parseVaultAttestation({
+      schemaVersion: "1",
+      cid: sampleCid,
+      sha256: sampleSha.toUpperCase(),
+      size: 0,
+      payer: "0.0.1",
+      memo: "",
+      ts: 1,
+      mime: "",
+    });
+    expect(parsed.ok).toBe(true);
+    if (parsed.ok) {
+      expect(parsed.value.sha256).toBe(sampleSha.toLowerCase());
+      expect(parsed.value.schemaVersion).toBe(1);
+      expect(parsed.value.mime).toBeUndefined();
+    }
+  });
+
+  it("serializeVaultAttestation throws on invalid input", () => {
+    expect(() =>
+      serializeVaultAttestation({
+        cid: "bad",
+        sha256: sampleSha,
+        size: 1,
+        payer: "0.0.1",
+        memo: "",
+        ts: 1,
+      }),
+    ).toThrow();
+  });
 });
+
 
 describe("money bigint", () => {
   it("converts HBAR without floats", () => {
@@ -244,5 +329,23 @@ describe("verify proof helpers (mock mirror)", () => {
       message: Buffer.from("not-json", "utf8").toString("base64"),
     };
     expect(matchFromMirrorMessage(junk, { topicId: "0.0.1" })).toBeNull();
+  });
+
+  it("returns empty matches when cid absent; ignores garbage among valid", () => {
+    const messages = [
+      {
+        sequence_number: 1,
+        consensus_timestamp: "1.0",
+        message: Buffer.from("{}", "utf8").toString("base64"),
+      },
+      {
+        sequence_number: 2,
+        consensus_timestamp: "2.0",
+        topic_id: "0.0.99",
+        message: Buffer.from(legacyBody, "utf8").toString("base64"),
+      },
+    ];
+    expect(findCidMatches(messages, "bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi", { topicId: "0.0.99" })).toHaveLength(1);
+    expect(findCidMatches(messages, "bafybeiunknowncidxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx", { topicId: "0.0.99" })).toHaveLength(0);
   });
 });
