@@ -54,7 +54,7 @@ export function matchFromMirrorMessage(
     consensusTimestampIso: formatConsensusTimestamp(m.consensus_timestamp),
     payerAccountId: m.payer_account_id,
     runningHash: m.running_hash,
-    hashScanUrl: hashScanTopicMessageUrl(topicId, seq, network),
+    hashScanUrl: hashScanTopicMessageUrl(topicId, seq, network, m.consensus_timestamp),
     raw: decoded,
   };
 }

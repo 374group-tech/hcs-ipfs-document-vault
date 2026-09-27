@@ -11,12 +11,26 @@ export function hashScanTopicUrl(topicId: string, network: HashScanNetwork = "te
   return `${hashScanBase(network)}/topic/${topicId}`;
 }
 
+/**
+ * HashScan link for one HCS topic message.
+ *
+ * HashScan has no `/topic/<id>/<sequence>` route (it renders "page not found").
+ * A single message is addressable via its consensus timestamp
+ * (`/transaction/<seconds.nanos>`); without one we fall back to the topic's
+ * Messages tab (`/topic/<id>/messages`). `sequenceNumber` is kept for API
+ * compatibility and callers' logging.
+ */
 export function hashScanTopicMessageUrl(
   topicId: string,
-  sequenceNumber: string | number,
+  _sequenceNumber: string | number,
   network: HashScanNetwork = "testnet",
+  consensusTimestamp?: string,
 ): string {
-  return `${hashScanBase(network)}/topic/${topicId}/${sequenceNumber}`;
+  const base = hashScanBase(network);
+  if (consensusTimestamp && /^\d+\.\d+$/.test(consensusTimestamp)) {
+    return `${base}/transaction/${consensusTimestamp}`;
+  }
+  return `${base}/topic/${topicId}/messages`;
 }
 
 export function hashScanTransactionUrl(

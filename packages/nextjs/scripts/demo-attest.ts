@@ -69,15 +69,15 @@ async function main() {
   console.log(`topicId=${result.topicId}`);
   console.log(`sequenceNumber=${result.sequenceNumber}`);
   console.log(`transactionId=${result.transactionId}`);
-  console.log(`HashScan topic message: ${result.hashScanTopicUrl}`);
-  console.log(`HashScan transaction:   ${result.hashScanTxUrl}`);
+  console.log(`HashScan message (tx):   ${result.hashScanTxUrl}`);
+  console.log(`HashScan topic messages: ${result.hashScanTopicUrl}`);
   console.log(`message=${JSON.stringify(result.attestation)}`);
   if (result.pinFee) {
     console.log(`pinFee=${JSON.stringify(result.pinFee)}`);
   } else {
     console.log("pinFee=skipped (PIN_TOKEN_ID unset — free attest, network fee only)");
   }
-  console.log("\nPaste the HashScan topic message URL into README Status when you have a funded testnet key.");
+  console.log("\nPaste the HashScan message (tx) URL into README Status when you have a funded testnet key.");
 }
 
 main().catch((e) => {

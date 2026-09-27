@@ -73,6 +73,10 @@ PNG captures are optional — see [assets/README.md](./assets/README.md). Until 
 Use the public topic and CIDs already attested on testnet (see README Status). No faucet keys required for verify.
 
 ```bash
+# Schema v1 (seq 5, attested in the demo video) — expect match=yes, prevCid = seq 4 CID
+yarn verify:proof bafkreihbeveqd5e6z7sry2zjyxqfzzjcoc6efxnj4isnb47tyt5xnedlru \
+  --topic 0.0.10600873 --sequence 5
+
 # Schema v1 (seq 4) — expect match=yes, schemaVersion=1, prevCid set
 yarn verify:proof bafkreic5ywzvohvo6kbiuym2q57omcfruwgfrbekfip73h33jqjdolgdaq \
   --topic 0.0.10600873 --sequence 4
@@ -82,7 +86,7 @@ yarn verify:proof bafkreif7ckqfqbizpthadxlizpgwlgujq6lv3uj26ef2bshy4n2kyd2yny \
   --topic 0.0.10600873 --sequence 3
 ```
 
-HashScan: [seq 4 (schema v1)](https://hashscan.io/testnet/topic/0.0.10600873/4) · [seq 3 (legacy)](https://hashscan.io/testnet/topic/0.0.10600873/3) · [topic](https://hashscan.io/testnet/topic/0.0.10600873).
+HashScan: [seq 5 (schema v1, demo video)](https://hashscan.io/testnet/transaction/1790452500.354841883) · [seq 4 (schema v1)](https://hashscan.io/testnet/transaction/1790146037.223851181) · [seq 3 (legacy)](https://hashscan.io/testnet/transaction/1789747927.579637159) · [all messages](https://hashscan.io/testnet/topic/0.0.10600873/messages) · [topic](https://hashscan.io/testnet/topic/0.0.10600873).
 
 Architecture diagram (no screenshots required): [assets/architecture.svg](./assets/architecture.svg). Screenshot checklist: [assets/README.md](./assets/README.md).
 

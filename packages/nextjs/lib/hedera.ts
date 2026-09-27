@@ -214,6 +214,7 @@ export async function submitAttestation(params: {
       topicId,
       sequenceNumber,
       transactionId,
+      // Receipt has no consensus timestamp -> topic Messages tab; hashScanTxUrl opens this exact message.
       hashScanTopicUrl: hashScanTopicMessageUrl(topicId, sequenceNumber, env.network),
       hashScanTxUrl: hashScanTransactionUrl(transactionId, env.network),
       pinFee,

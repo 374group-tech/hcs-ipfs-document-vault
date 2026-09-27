@@ -59,9 +59,10 @@ DEMO_PRECOMPUTED_CID=bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi
 Expected stdout includes:
 
 - `sequenceNumber=…`
-- `HashScan topic message: https://hashscan.io/testnet/topic/0.0.…/…`
+- `HashScan message (tx): https://hashscan.io/testnet/transaction/0.0.…%40…`
+- `HashScan topic messages: https://hashscan.io/testnet/topic/0.0.…/messages`
 
-Copy that URL into the README Status table.
+Copy the message (tx) URL into the README Status table. (HashScan has no `/topic/<id>/<sequence>` page; `yarn verify:proof` prints a `/transaction/<consensus timestamp>` link.)
 
 npm equivalent:
 

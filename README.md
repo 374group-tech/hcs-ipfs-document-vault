@@ -50,8 +50,11 @@ yarn next:dev                # http://localhost:3000
 
 npm equivalents: `npm run demo:topic -w @vault/nextjs`, `npm run demo:attest -w @vault/nextjs`, `npm run verify:proof -w @vault/nextjs -- <CID>`, `npm run next:dev`.
 
-**Expected attest stdout:** `sequenceNumber=…` and  
-`https://hashscan.io/testnet/topic/<HCS_TOPIC_ID>/<sequence>`.
+**Expected attest stdout:** `sequenceNumber=…`,  
+`HashScan message (tx): https://hashscan.io/testnet/transaction/<transactionId>` and  
+`HashScan topic messages: https://hashscan.io/testnet/topic/<HCS_TOPIC_ID>/messages`.
+
+> HashScan has no `/topic/<id>/<sequence>` page. Link one message by its consensus timestamp (`/transaction/<seconds.nanos>`) or transaction ID; `yarn verify:proof` prints the timestamp form as `hashScanUrl`.
 
 ---
 
@@ -163,7 +166,7 @@ Copy roots: `cp .env.example .env` and `cp packages/nextjs/.env.example packages
 ## Product behaviour
 
 1. **Upload** — client hashes sha256; bytes → IPFS provider (`kubo` or `pinata`) or precomputed CID dry-run → CID.
-2. **Attest** — `TopicMessageSubmit` with schema-v1 JSON `{schemaVersion:1, cid, sha256, size, payer, memo, ts, mime?, prevCid?}`; UI shows sequence + HashScan `…/topic/<id>/<sequence>`.
+2. **Attest** — `TopicMessageSubmit` with schema-v1 JSON `{schemaVersion:1, cid, sha256, size, payer, memo, ts, mime?, prevCid?}`; UI shows sequence + HashScan links (message via `…/transaction/<id>`, topic `…/topic/<id>/messages`).
 3. **Optional pin fee** — if `PIN_TOKEN_ID` set: native HBAR CryptoTransfer or HIP-336 allowance + transfer payer → treasury. Else free attest (network fee only).
 4. **Verify** — `yarn verify:proof <CID>` or UI paste CID/sequence → Mirror Node → match (legacy + v1) with topic / seq / consensus timestamp + HashScan + “Fetch from IPFS”.
 5. **One-click demo** — `yarn demo:attest` / `npm run demo:attest -w @vault/nextjs`.
@@ -189,23 +192,24 @@ Prints `match=yes|no`, `sequence`, `consensusTimestamp`, `hashScanUrl`, `sha256`
 
 Honest status from this workspace (Asia/Yerevan). Do not claim commands you have not run.
 
-**Judge-facing HashScan proofs (IPFS + HCS + optional HBAR pin):** topic [`0.0.10600873`](https://hashscan.io/testnet/topic/0.0.10600873) · **schema v1** seq [4](https://hashscan.io/testnet/topic/0.0.10600873/4) (CID `bafkreic5ywzvohvo6kbiuym2q57omcfruwgfrbekfip73h33jqjdolgdaq`, `prevCid` → legacy) · **legacy** seq [3](https://hashscan.io/testnet/topic/0.0.10600873/3) · pin [transfer](https://hashscan.io/testnet/transaction/0.0.10600860%401789747920.746708423). Both validate via `yarn verify:proof`. Full table below.
+**Judge-facing HashScan proofs (IPFS + HCS + optional HBAR pin):** topic [`0.0.10600873`](https://hashscan.io/testnet/topic/0.0.10600873) · [messages](https://hashscan.io/testnet/topic/0.0.10600873/messages) · **schema v1** seq [5](https://hashscan.io/testnet/transaction/1790452500.354841883) (demo-video attest from `/upload`, CID `bafkreihbeveqd5e6z7sry2zjyxqfzzjcoc6efxnj4isnb47tyt5xnedlru`, `prevCid` → seq 4) · **schema v1** seq [4](https://hashscan.io/testnet/transaction/1790146037.223851181) (CID `bafkreic5ywzvohvo6kbiuym2q57omcfruwgfrbekfip73h33jqjdolgdaq`, `prevCid` → legacy) · **legacy** seq [3](https://hashscan.io/testnet/transaction/1789747927.579637159) · pin [transfer](https://hashscan.io/testnet/transaction/0.0.10600860%401789747920.746708423). All validate via `yarn verify:proof`. Full table below.
 
 | Milestone | Command | Result |
 | --- | --- | --- |
 | Template tree | — | Present at repo root (`packages/ledger`, `hardhat`, `nextjs`) |
 | `yarn install` | `yarn install` (Yarn 3.2.3) | **PASS** (2026-09-18) |
 | `npm install` | fresh copy `npm install` | **PASS** (2026-09-18; 1162 packages) |
-| Lint | `yarn lint` | **PASS** (2026-09-23) |
-| Unit tests | `yarn test` | **PASS** (2026-09-23) — ledger + Hardhat + nextjs |
-| Build | `yarn build` | **PASS** (2026-09-23) — ledger + Hardhat compile + Next.js |
+| Lint | `yarn lint` | **PASS** (2026-09-27) |
+| Unit tests | `yarn test` | **PASS** (2026-09-27) — ledger + Hardhat + nextjs |
+| Build | `yarn build` | **PASS** (2026-09-27) — ledger + Hardhat compile + Next.js |
 | Local `create-scaffold-hbar` | `CREATE_SCAFFOLD_HBAR_TEMPLATE_DIR=… npx create-scaffold-hbar@0.4.0 … --skip-install` | **PASS** (2026-09-23 Asia/Yerevan) with isolated HOME git identity |
 | Create topic | `yarn demo:topic` | **PASS** — topic [`0.0.10600873`](https://hashscan.io/testnet/topic/0.0.10600873) |
 | Local Kubo IPFS | `ipfs daemon` + API `:5001` | **PASS** — add source=`kubo` |
 | HBAR pin fee | `PIN_TOKEN_ID=HBAR` | **PASS** — 100000 tinybar → treasury [`0.0.10604200`](https://hashscan.io/testnet/account/0.0.10604200) · [transfer](https://hashscan.io/testnet/transaction/0.0.10600860%401789747920.746708423) |
-| Demo attest (legacy) | `yarn demo:attest` | **PASS** (2026-09-18) — HCS seq [3](https://hashscan.io/testnet/topic/0.0.10600873/3) · Kubo CID `bafkreif7ckqfqbizpthadxlizpgwlgujq6lv3uj26ef2bshy4n2kyd2yny` · [tx](https://hashscan.io/testnet/transaction/0.0.10600860%401789747921.086074708) |
-| Schema v1 attest + `prevCid` | `DEMO_PREV_CID=… yarn demo:attest` | **PASS** (2026-09-23 Asia/Yerevan) — HCS seq [4](https://hashscan.io/testnet/topic/0.0.10600873/4) · Kubo CID `bafkreic5ywzvohvo6kbiuym2q57omcfruwgfrbekfip73h33jqjdolgdaq` · `schemaVersion=1` · [tx](https://hashscan.io/testnet/transaction/0.0.10600860%401790146030.930645533) |
-| CLI verify | `yarn verify:proof <CID> --topic 0.0.10600873 --sequence N` | **PASS** (re-checked 2026-09-23) — seq 4 → `schemaVersion=1`; seq 3 → `schemaVersion=legacy`; exit 0 |
+| Demo attest (legacy) | `yarn demo:attest` | **PASS** (2026-09-18) — HCS seq [3](https://hashscan.io/testnet/transaction/1789747927.579637159) · Kubo CID `bafkreif7ckqfqbizpthadxlizpgwlgujq6lv3uj26ef2bshy4n2kyd2yny` · [tx](https://hashscan.io/testnet/transaction/0.0.10600860%401789747921.086074708) |
+| Schema v1 attest + `prevCid` | `DEMO_PREV_CID=… yarn demo:attest` | **PASS** (2026-09-23 Asia/Yerevan) — HCS seq [4](https://hashscan.io/testnet/transaction/1790146037.223851181) · Kubo CID `bafkreic5ywzvohvo6kbiuym2q57omcfruwgfrbekfip73h33jqjdolgdaq` · `schemaVersion=1` · [tx](https://hashscan.io/testnet/transaction/0.0.10600860%401790146030.930645533) |
+| Schema v1 attest via UI (demo video) | `/upload` (Kubo) | **PASS** (2026-09-26 Asia/Yerevan) — HCS seq [5](https://hashscan.io/testnet/transaction/1790452500.354841883) · Kubo CID `bafkreihbeveqd5e6z7sry2zjyxqfzzjcoc6efxnj4isnb47tyt5xnedlru` · `schemaVersion=1` · `prevCid` → seq 4 · [tx](https://hashscan.io/testnet/transaction/0.0.10600860%401790452493.938386811) |
+| CLI verify | `yarn verify:proof <CID> --topic 0.0.10600873 --sequence N` | **PASS** (re-checked 2026-09-27) — seq 5 / seq 4 → `schemaVersion=1`; seq 3 → `schemaVersion=legacy`; exit 0 |
 | App routes | `yarn next:start` smoke | **PASS** — `/`, `/upload`, `/verify` returned HTTP 200 |
 
 ## Local create-scaffold-hbar self-check

@@ -180,13 +180,13 @@ export default function UploadPage() {
             <strong>{attestResult.sequenceNumber}</strong>
           </p>
           <p>
-            HashScan (topic message):{" "}
+            HashScan (topic messages):{" "}
             <a href={attestResult.hashScanTopicUrl} target="_blank" rel="noreferrer">
               {attestResult.hashScanTopicUrl}
             </a>
           </p>
           <p>
-            HashScan (tx):{" "}
+            HashScan (this message / tx):{" "}
             <a href={attestResult.hashScanTxUrl} target="_blank" rel="noreferrer">
               {attestResult.hashScanTxUrl}
             </a>

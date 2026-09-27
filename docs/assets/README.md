@@ -18,7 +18,7 @@ Drop real PNGs here when you record the demo video. Suggested names match [docs/
 | `02-attest.png` | Attest result: sequence number, HashScan link, schema v1 JSON snippet |
 | `03-verify.png` | `/verify` match: topic / seq / consensus timestamp / HashScan |
 | `04-verify-proof.png` | Terminal: `yarn verify:proof … --sequence 4` → `match=yes` `schemaVersion=1` |
-| `05-hashscan.png` | HashScan topic message page for seq 4 (schema v1) |
+| `05-hashscan.png` | HashScan message page for seq 4 (schema v1): `/transaction/1790146037.223851181` |
 
 Do **not** commit secrets, `.env`, or wallet seed screenshots. Prefer testnet-only accounts.
 

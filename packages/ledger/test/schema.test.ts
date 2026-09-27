@@ -234,8 +234,15 @@ describe("money bigint", () => {
 
 describe("hashscan helpers", () => {
   it("builds topic message and ipfs urls", () => {
+    expect(hashScanTopicMessageUrl("0.0.99", 7, "testnet", "1790452500.354841883")).toBe(
+      "https://hashscan.io/testnet/transaction/1790452500.354841883",
+    );
+    // No (or malformed) consensus timestamp -> topic Messages tab, never /topic/<id>/<seq>
     expect(hashScanTopicMessageUrl("0.0.99", 7, "testnet")).toBe(
-      "https://hashscan.io/testnet/topic/0.0.99/7",
+      "https://hashscan.io/testnet/topic/0.0.99/messages",
+    );
+    expect(hashScanTopicMessageUrl("0.0.99", 7, "mainnet", "not-a-ts")).toBe(
+      "https://hashscan.io/mainnet/topic/0.0.99/messages",
     );
     expect(ipfsGatewayUrl(sampleCid)).toContain(sampleCid);
   });
@@ -319,7 +326,9 @@ describe("verify proof helpers (mock mirror)", () => {
     expect(matches[1].sequenceNumber).toBe(3);
     expect(matches[1].attestation.schemaVersion).toBe(1);
     expect(matches[1].attestation.prevCid).toBe(prevCid);
-    expect(matches[1].hashScanUrl).toBe("https://hashscan.io/testnet/topic/0.0.99/3");
+    expect(matches[1].hashScanUrl).toBe(
+      "https://hashscan.io/testnet/transaction/1700000002.000000000",
+    );
   });
 
   it("returns null for non-attestation payloads", () => {
