@@ -1,0 +1,102 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    name: install · lint · test · build
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: yarn
+      - name: Install
+        run: yarn install --immutable
+      - name: Lint (tsc, solhint, next lint)
+        run: yarn lint
+      - name: Test (ledger vitest, hardhat mocha, nextjs vitest)
+        run: yarn test
+      - name: Build
+        run: yarn build
+
+  testnet-proofs:
+    name: verify live testnet proofs (Mirror Node)
+    needs: check
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      HEDERA_NETWORK: testnet
+      TOPIC: "0.0.10600873"
+      CID5: bafkreihbeveqd5e6z7sry2zjyxqfzzjcoc6efxnj4isnb47tyt5xnedlru
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: yarn
+      - run: yarn install --immutable
+      - name: HCS anchors for seq 1-5 (legacy + schema v1), content skipped
+        run: |
+          set -e
+          i=0
+          for cid in \
+            bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi \
+            bafkreiei5zxiksg2nytbmtmdhp6tguankwmdftrc6gqwvmct632ezbgrka \
+            bafkreif7ckqfqbizpthadxlizpgwlgujq6lv3uj26ef2bshy4n2kyd2yny \
+            bafkreic5ywzvohvo6kbiuym2q57omcfruwgfrbekfip73h33jqjdolgdaq \
+            "$CID5"; do
+            i=$((i+1))
+            yarn verify:proof "$cid" --topic "$TOPIC" --sequence "$i" --skip-content
+          done
+      - name: Bundled original file matches seq 5 (exit 0)
+        run: yarn verify:proof "$CID5" --topic "$TOPIC" --sequence 5 --file docs/examples/agreement-seq5.txt
+      - name: Bundled tampered file fails with exit 2
+        run: |
+          set +e
+          yarn verify:proof "$CID5" --topic "$TOPIC" --sequence 5 --file docs/examples/agreement-seq5-tampered.txt
+          code=$?
+          echo "exit=$code"
+          test "$code" -eq 2
+
+  scaffold-smoke:
+    name: fresh create-scaffold-hbar@latest smoke
+    needs: check
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Git identity for the scaffold's initial commit
+        run: |
+          git config --global user.email "ci@users.noreply.github.com"
+          git config --global user.name "ci"
+      - name: Scaffold from this template
+        working-directory: ${{ runner.temp }}
+        run: |
+          npm create scaffold-hbar@latest -- vault-app \
+            --template ${{ github.repository }} \
+            -f nextjs-app -s hardhat --package-manager yarn --network testnet \
+            --ci --skip-install --skip-hedera-skills
+          test -f vault-app/template.json && test -d vault-app/packages/ledger
+      - name: Install and test the scaffolded app
+        working-directory: ${{ runner.temp }}/vault-app
+        run: |
+          yarn install
+          yarn workspace @vault/ledger test
+          yarn workspace @vault/nextjs test
