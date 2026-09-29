@@ -19,6 +19,20 @@ Tested with **create-scaffold-hbar 0.4.1** (see [Status](#status--roadmap)); CI 
 | **Verify: match** (bytes downloaded, sha256 + raw CID recomputed) | **Verify: tampered file** (`hash-mismatch`, exit 2) |
 | ![Verify match](./docs/screenshots/verify-match.png) | ![Verify tampered](./docs/screenshots/verify-tampered.png) |
 
+## Why / Who is it for
+
+**Problem:** when a document is shared, signed or issued, there is rarely a neutral record of *which exact bytes* existed *when*, and *who* anchored them. That gap produces "I signed a different version" disputes, silently edited reports and forged certificates, and settling them usually means trusting whoever holds the file.
+
+**Target use cases** (what the template is designed for; no customers, partners or pilots are claimed):
+
+| | Use case | What the vault proves |
+| --- | --- | --- |
+| **A** | **Contracts and legal documents** (lead demo: `agreement` with Bob → Mallory tampered) | Which exact version was anchored, and when (HCS consensus timestamp). A different version fails verify with `hash-mismatch`, which stops "I signed a different version" disputes. |
+| **B** | **Audit and financial reports** | A tamper-evident filing trail: each revision is a new attest whose `prevCid` points at the previous one, so the revision chain is ordered and public. |
+| **C** | **Diplomas and certificates** | Anyone can check an issued certificate against the issuer's topic without calling the issuer; a fake or edited copy fails. |
+
+**How:** the bytes go to **IPFS** (content-addressed CID). A schema-v1 message with **CID + sha256 + payer** is anchored on a **Hedera Consensus Service** topic (optionally gated by a **submit key**, so only the issuer can write). **Trustless verify** (`/verify` or `yarn verify:proof`) reads the anchor from the Mirror Node, cross-checks the payer, downloads the bytes from IPFS and recomputes sha256 and the CID itself. No server of ours has to be trusted.
+
 ---
 
 ## 5-minute path (scaffold → run → upload → attest → verify)
@@ -260,7 +274,7 @@ rejects unsigned messages with `INVALID_SIGNATURE`. Verifying doesn't need the k
 
 Honest status from this workspace (Asia/Yerevan). Do not claim commands you have not run.
 
-**Judge-facing HashScan proofs (IPFS + HCS + optional HBAR pin):** topic [`0.0.10600873`](https://hashscan.io/testnet/topic/0.0.10600873) · [messages](https://hashscan.io/testnet/topic/0.0.10600873/messages) · **schema v1** seq [5](https://hashscan.io/testnet/transaction/1790452500.354841883) (demo-video attest from `/upload`, CID `bafkreihbeveqd5e6z7sry2zjyxqfzzjcoc6efxnj4isnb47tyt5xnedlru`, `prevCid` → seq 4) · **schema v1** seq [4](https://hashscan.io/testnet/transaction/1790146037.223851181) (CID `bafkreic5ywzvohvo6kbiuym2q57omcfruwgfrbekfip73h33jqjdolgdaq`, `prevCid` → legacy) · **legacy** seq [3](https://hashscan.io/testnet/transaction/1789747927.579637159) · pin [transfer](https://hashscan.io/testnet/transaction/0.0.10600860%401789747920.746708423). All validate via `yarn verify:proof`. Full table below.
+**Judge-facing HashScan proofs (IPFS + HCS + optional HBAR pin):** topic [`0.0.10600873`](https://hashscan.io/testnet/topic/0.0.10600873) · [messages](https://hashscan.io/testnet/topic/0.0.10600873/messages) · **schema v1** seq [6](https://hashscan.io/testnet/transaction/1790716111.334362104) (demo video v2 attest, CID `bafkreigssrxkydx62c7o53mg45qdyn5yu5ng22cr6llon7xmwni3zsukga`, `prevCid` → seq 5) · **schema v1** seq [5](https://hashscan.io/testnet/transaction/1790452500.354841883) (demo-video attest from `/upload`, CID `bafkreihbeveqd5e6z7sry2zjyxqfzzjcoc6efxnj4isnb47tyt5xnedlru`, `prevCid` → seq 4) · **schema v1** seq [4](https://hashscan.io/testnet/transaction/1790146037.223851181) (CID `bafkreic5ywzvohvo6kbiuym2q57omcfruwgfrbekfip73h33jqjdolgdaq`, `prevCid` → legacy) · **legacy** seq [3](https://hashscan.io/testnet/transaction/1789747927.579637159) · pin [transfer](https://hashscan.io/testnet/transaction/0.0.10600860%401789747920.746708423) · submit-key-gated topic [`0.0.10782484`](https://hashscan.io/testnet/topic/0.0.10782484). All validate via `yarn verify:proof`. Full table below.
 
 | Milestone | Command | Result |
 | --- | --- | --- |
@@ -278,10 +292,12 @@ Honest status from this workspace (Asia/Yerevan). Do not claim commands you have
 | Demo attest (legacy) | `yarn demo:attest` | **PASS** (2026-09-18) — HCS seq [3](https://hashscan.io/testnet/transaction/1789747927.579637159) · Kubo CID `bafkreif7ckqfqbizpthadxlizpgwlgujq6lv3uj26ef2bshy4n2kyd2yny` · [tx](https://hashscan.io/testnet/transaction/0.0.10600860%401789747921.086074708) |
 | Schema v1 attest + `prevCid` | `DEMO_PREV_CID=… yarn demo:attest` | **PASS** (2026-09-23 Asia/Yerevan) — HCS seq [4](https://hashscan.io/testnet/transaction/1790146037.223851181) · Kubo CID `bafkreic5ywzvohvo6kbiuym2q57omcfruwgfrbekfip73h33jqjdolgdaq` · `schemaVersion=1` · [tx](https://hashscan.io/testnet/transaction/0.0.10600860%401790146030.930645533) |
 | Schema v1 attest via UI (demo video) | `/upload` (Kubo) | **PASS** (2026-09-26 Asia/Yerevan) — HCS seq [5](https://hashscan.io/testnet/transaction/1790452500.354841883) · Kubo CID `bafkreihbeveqd5e6z7sry2zjyxqfzzjcoc6efxnj4isnb47tyt5xnedlru` · `schemaVersion=1` · `prevCid` → seq 4 · [tx](https://hashscan.io/testnet/transaction/0.0.10600860%401790452493.938386811) |
+| Schema v1 attest (demo video v2) | `/upload` (Kubo) | **PASS** (2026-09-30 01:08 Asia/Yerevan) — HCS seq [6](https://hashscan.io/testnet/transaction/1790716111.334362104) on topic `0.0.10600873` · CID `bafkreigssrxkydx62c7o53mg45qdyn5yu5ng22cr6llon7xmwni3zsukga` · `schemaVersion=1` · `prevCid` → seq 5 · `payerCheck=match`; `yarn verify:proof` → `match` (sha256 + raw CID recomputed via local Kubo gateway, 2026-09-30) |
 | CLI verify (HCS anchor) | `yarn verify:proof <CID> --topic 0.0.10600873 --sequence N --skip-content` | **PASS** (2026-09-29) — seq 1–5 `hcs-only`, exit 0; `payerCheck=match` on all five |
 | CLI trustless verify | `yarn verify:proof <CID> --topic 0.0.10600873 --sequence N` | seq 4, 5: `match` (sha256 + raw CID recomputed) when a gateway serves the bytes (public gateways answered 429 from the dev box; local Kubo gateway via `IPFS_GATEWAY_FALLBACKS` worked). seq 2, 3: bytes bundled in `docs/examples`, `--file` → `match`. seq 1: dry-run placeholder CID → `hash-mismatch` (expected, see [examples](./docs/examples/README.md)) |
 | Tamper demo | `--file docs/examples/agreement-seq5-tampered.txt` | **PASS**: `hash-mismatch`, exit 2 (also asserted in CI) |
 | Topic submit key | `HCS_SUBMIT_KEY=<ED25519> ` create + attest | **PASS** (2026-09-29): gated topic [`0.0.10775303`](https://hashscan.io/testnet/topic/0.0.10775303) ([create tx](https://hashscan.io/testnet/transaction/0.0.10600860%401790678930.876029437)); signed attest seq [1](https://hashscan.io/testnet/transaction/1790678937.359058295) verifies `match`; an unsigned submit was rejected with `INVALID_SIGNATURE` |
+| Topic submit key (re-run) | `HCS_SUBMIT_KEY=<ED25519>` create + attest | **PASS** (2026-09-30 Asia/Yerevan, Mirror Node checked): gated topic [`0.0.10782484`](https://hashscan.io/testnet/topic/0.0.10782484) with an ED25519 `submit_key` ([create tx](https://hashscan.io/testnet/transaction/0.0.10600860%401790716543.438353112), `SUCCESS`); signed attest seq [1](https://hashscan.io/testnet/transaction/0.0.10600860%401790716565.681482085) `SUCCESS`; unsigned submit [rejected](https://hashscan.io/testnet/transaction/0.0.10600860%401790716587.656428126) with `INVALID_SIGNATURE` |
 | App routes | `yarn next:start` smoke | **PASS** — `/`, `/upload`, `/verify` returned HTTP 200 |
 
 ## Local create-scaffold-hbar self-check
