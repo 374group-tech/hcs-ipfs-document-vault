@@ -38,6 +38,10 @@
         "description": "HCS topic ID that stores vault attestation messages"
       },
       {
+        "key": "HCS_SUBMIT_KEY",
+        "description": "Optional submit key for new topics: 'operator' or a private key. Unset = public topic. Never commit."
+      },
+      {
         "key": "HEDERA_MIRROR_NODE_URL",
         "description": "Mirror Node REST base URL"
       },
@@ -51,7 +55,11 @@
       },
       {
         "key": "IPFS_GATEWAY_URL",
-        "description": "Public IPFS gateway prefix for fetch links"
+        "description": "Primary IPFS gateway for fetch links and trustless content verify"
+      },
+      {
+        "key": "IPFS_GATEWAY_FALLBACKS",
+        "description": "Optional CSV of extra gateways tried on timeout/error during verify"
       },
       {
         "key": "PINATA_JWT",

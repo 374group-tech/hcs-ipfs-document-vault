@@ -12,23 +12,26 @@ import {
 } from "@hashgraph/sdk";
 import {
   buildVaultAttestation,
+  collectMirrorPages,
   serializeVaultAttestation,
   hashScanTopicMessageUrl,
   hashScanTransactionUrl,
   mirrorTopicMessagesUrl,
   mirrorTopicMessageUrl,
+  type MirrorMessagesPage,
+  type PagedMessages,
   type VaultAttestation,
 } from "@vault/ledger";
 import { getVaultEnv, pinFeeEnabled, pinFeeIsHbar, type VaultEnv } from "./env";
 
 function parsePrivateKey(raw: string): PrivateKey {
   const trimmed = raw.trim();
-  const attempts: Array<() => PrivateKey> = [
-    () => PrivateKey.fromStringECDSA(trimmed),
-    () => PrivateKey.fromStringED25519(trimmed),
-    () => PrivateKey.fromStringDer(trimmed),
-    () => PrivateKey.fromString(trimmed),
-  ];
+  // Raw 32-byte hex is ambiguous: try ECDSA (portal default), then ED25519. Longer strings are
+  // DER, which encodes the key type (fromStringECDSA would mis-read ED25519 DER as ECDSA).
+  const isRaw = /^(0x)?[0-9a-f]{64}$/i.test(trimmed);
+  const attempts: Array<() => PrivateKey> = isRaw
+    ? [() => PrivateKey.fromStringECDSA(trimmed), () => PrivateKey.fromStringED25519(trimmed)]
+    : [() => PrivateKey.fromStringDer(trimmed)];
   let last: unknown;
   for (const attempt of attempts) {
     try {
@@ -51,18 +54,40 @@ export function createOperatorClient(env: VaultEnv = getVaultEnv()): Client {
   return client;
 }
 
+/**
+ * Resolve HCS_SUBMIT_KEY: "" → none (public topic), "operator" → HEDERA_PRIVATE_KEY,
+ * anything else → parsed as a private key.
+ */
+export function resolveSubmitKey(env: VaultEnv = getVaultEnv()): PrivateKey | null {
+  const raw = env.hcsSubmitKey.trim();
+  if (!raw) return null;
+  if (raw.toLowerCase() === "operator") {
+    if (!env.privateKey) throw new Error("HCS_SUBMIT_KEY=operator requires HEDERA_PRIVATE_KEY");
+    return parsePrivateKey(env.privateKey);
+  }
+  try {
+    return parsePrivateKey(raw);
+  } catch {
+    throw new Error("HCS_SUBMIT_KEY is not a valid private key (or use HCS_SUBMIT_KEY=operator)");
+  }
+}
+
 export async function createVaultTopic(memo = "hcs-ipfs-document-vault"): Promise<{
   topicId: string;
   transactionId: string;
   hashScanUrl: string;
+  submitKeyPublic: string | null;
 }> {
   const env = getVaultEnv();
+  const submitKey = resolveSubmitKey(env);
   const client = createOperatorClient(env);
   try {
-    const tx = await new TopicCreateTransaction()
+    const create = new TopicCreateTransaction()
       .setTopicMemo(memo)
-      .setMaxTransactionFee(new Hbar(2))
-      .execute(client);
+      .setMaxTransactionFee(new Hbar(2));
+    // With a submit key only holders of that key can post attestations to the topic.
+    if (submitKey) create.setSubmitKey(submitKey.publicKey);
+    const tx = await create.execute(client);
     const receipt = await tx.getReceipt(client);
     const topicId = receipt.topicId?.toString();
     if (!topicId) throw new Error("TopicCreate did not return topicId");
@@ -71,6 +96,7 @@ export async function createVaultTopic(memo = "hcs-ipfs-document-vault"): Promis
       topicId,
       transactionId,
       hashScanUrl: hashScanTransactionUrl(transactionId, env.network),
+      submitKeyPublic: submitKey ? submitKey.publicKey.toStringDer() : null,
     };
   } finally {
     client.close();
@@ -197,11 +223,15 @@ export async function submitAttestation(params: {
   try {
     const pinFee = await maybePayPinFee(client, env);
 
-    const tx = await new TopicMessageSubmitTransaction()
+    const submit = new TopicMessageSubmitTransaction()
       .setTopicId(topicId)
       .setMessage(body)
       .setMaxTransactionFee(new Hbar(2))
-      .execute(client);
+      .freezeWith(client);
+    // Topics created with a submit key reject messages not signed by it.
+    const submitKey = resolveSubmitKey(env);
+    if (submitKey) await submit.sign(submitKey);
+    const tx = await submit.execute(client);
     const receipt = await tx.getReceipt(client);
     if (receipt.status !== Status.Success) {
       throw new Error(`TopicMessageSubmit failed: ${receipt.status.toString()}`);
@@ -233,41 +263,43 @@ export type MirrorTopicMessage = {
   payer_account_id?: string;
 };
 
-export async function fetchTopicMessages(
-  topicId: string,
-  opts: { limit?: number; order?: "asc" | "desc" } = {},
-): Promise<MirrorTopicMessage[]> {
-  const env = getVaultEnv();
-  const limit = opts.limit ?? 100;
-  const order = opts.order ?? "desc";
-  const url = mirrorTopicMessagesUrl(topicId, {
-    networkOrUrl: env.mirrorNodeUrl,
-    limit,
-    order,
-  });
+async function mirrorGetJson<T>(url: string): Promise<T> {
   const res = await fetch(url, { headers: { Accept: "application/json" } });
   if (!res.ok) {
     throw new Error(`Mirror Node error ${res.status}: ${await res.text()}`);
   }
-  const data = (await res.json()) as { messages?: MirrorTopicMessage[] };
-  return data.messages ?? [];
+  return (await res.json()) as T;
 }
 
-/** Fetch one HCS message by sequence via Mirror Node REST. */
+/**
+ * All topic messages (newest first by default), following Mirror `links.next`
+ * up to `maxPages` × `limit` messages.
+ */
+export async function fetchTopicMessages(
+  topicId: string,
+  opts: { limit?: number; order?: "asc" | "desc"; maxPages?: number; mirrorNodeUrl?: string } = {},
+): Promise<PagedMessages<MirrorTopicMessage>> {
+  const url = mirrorTopicMessagesUrl(topicId, {
+    networkOrUrl: opts.mirrorNodeUrl ?? getVaultEnv().mirrorNodeUrl,
+    limit: opts.limit ?? 100,
+    order: opts.order ?? "desc",
+  });
+  return collectMirrorPages(url, (u) => mirrorGetJson<MirrorMessagesPage<MirrorTopicMessage>>(u), {
+    maxPages: opts.maxPages,
+  });
+}
+
+/** Fetch one HCS message by sequence via Mirror Node REST (null on 404). */
 export async function fetchTopicMessageBySequence(
   topicId: string,
   sequenceNumber: string | number,
+  mirrorNodeUrl: string = getVaultEnv().mirrorNodeUrl,
 ): Promise<MirrorTopicMessage | null> {
-  const env = getVaultEnv();
-  const url = mirrorTopicMessageUrl(topicId, sequenceNumber, env.mirrorNodeUrl);
+  const url = mirrorTopicMessageUrl(topicId, sequenceNumber, mirrorNodeUrl);
   const res = await fetch(url, { headers: { Accept: "application/json" } });
   if (res.status === 404) return null;
   if (!res.ok) {
     throw new Error(`Mirror Node error ${res.status}: ${await res.text()}`);
   }
   return (await res.json()) as MirrorTopicMessage;
-}
-
-export function decodeMirrorMessage(messageBase64: string): string {
-  return Buffer.from(messageBase64, "base64").toString("utf8");
 }

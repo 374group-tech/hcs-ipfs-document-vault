@@ -1,6 +1,8 @@
 /**
  * Create an HCS topic for the vault and print env lines + HashScan URL.
  * Usage: yarn demo:topic
+ * Optional: HCS_SUBMIT_KEY=operator (or a dedicated private key) creates a gated topic whose
+ * messages must be signed by that key; attest paths sign with the same key automatically.
  */
 import { writeFileSync, existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
@@ -18,6 +20,11 @@ async function main() {
   console.log(`  HCS_TOPIC_ID=${result.topicId}`);
   console.log(`  NEXT_PUBLIC_HCS_TOPIC_ID=${result.topicId}`);
   console.log(`  transactionId=${result.transactionId}`);
+  console.log(
+    result.submitKeyPublic
+      ? `  submitKey=${result.submitKeyPublic} (only holders of HCS_SUBMIT_KEY can post)`
+      : "  submitKey=none (public topic: anyone can post; verify flags payer mismatches)",
+  );
   console.log(`  HashScan: ${result.hashScanUrl}`);
 
   const rootEnv = resolve(process.cwd(), "../../.env");

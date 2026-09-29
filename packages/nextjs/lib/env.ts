@@ -14,6 +14,12 @@ export type VaultEnv = {
   mirrorNodeUrl: string;
   ipfsApiUrl: string;
   ipfsGatewayUrl: string;
+  /** Extra gateways (CSV) tried after ipfsGatewayUrl during content verify. */
+  ipfsGatewayFallbacks: string;
+  /** Per-gateway timeout for content verify (ms). */
+  ipfsGatewayTimeoutMs: number;
+  /** Optional HCS submit key: "operator" or a private key string. Empty = public topic. */
+  hcsSubmitKey: string;
   /** kubo (default) | pinata */
   ipfsProvider: string;
   pinataJwt: string;
@@ -43,6 +49,9 @@ export function getVaultEnv(): VaultEnv {
       process.env.IPFS_GATEWAY_URL ||
       process.env.NEXT_PUBLIC_IPFS_GATEWAY_URL ||
       "https://ipfs.io/ipfs",
+    ipfsGatewayFallbacks: process.env.IPFS_GATEWAY_FALLBACKS || "",
+    ipfsGatewayTimeoutMs: Number(process.env.IPFS_GATEWAY_TIMEOUT_MS) || 15_000,
+    hcsSubmitKey: process.env.HCS_SUBMIT_KEY || "",
     ipfsProvider: process.env.IPFS_PROVIDER || "kubo",
     pinataJwt: process.env.PINATA_JWT || "",
     pinataApiKey: process.env.PINATA_API_KEY || "",
