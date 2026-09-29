@@ -1,145 +1,106 @@
 import { NextRequest, NextResponse } from "next/server";
 import {
+  DEFAULT_MAX_CONTENT_BYTES,
   hashScanTopicUrl,
   ipfsGatewayUrl,
-  mirrorTopicMessageUrl,
   mirrorTopicMessagesUrl,
-  matchFromMirrorMessage,
-  type CidMatch,
+  mirrorTopicMessageUrl,
 } from "@vault/ledger";
-import {
-  fetchTopicMessages,
-  fetchTopicMessageBySequence,
-} from "@/lib/hedera";
 import { getVaultEnv } from "@/lib/env";
+import { EXIT_CODES, verifyVaultCid, type ContentInput } from "@/lib/vault-verify";
 
 export const runtime = "nodejs";
 
-type MatchPayload = CidMatch & {
-  hashScanTopicUrl: string;
-  mirrorMessageUrl: string;
-  ipfsGatewayUrl: string;
-};
+type VerifyParams = { cid: string; topicId: string; sequence: string };
 
-function enrich(
-  match: CidMatch,
-  topicId: string,
-  network: string,
-  mirrorNodeUrl: string,
-  gateway: string,
-): MatchPayload {
-  return {
-    ...match,
-    hashScanTopicUrl: hashScanTopicUrl(topicId, network),
-    mirrorMessageUrl: mirrorTopicMessageUrl(topicId, match.sequenceNumber, mirrorNodeUrl),
-    ipfsGatewayUrl: ipfsGatewayUrl(match.attestation.cid, gateway),
-  };
+async function respond(params: VerifyParams, content: ContentInput) {
+  const env = getVaultEnv();
+  const topicId = params.topicId || env.topicId;
+  if (!topicId) {
+    return NextResponse.json({ error: "topicId required (query or HCS_TOPIC_ID)" }, { status: 400 });
+  }
+  if (!params.cid && !params.sequence) {
+    return NextResponse.json({ error: "cid and/or sequence required" }, { status: 400 });
+  }
+  let sequence: number | undefined;
+  if (params.sequence) {
+    sequence = Number(params.sequence);
+    if (!Number.isInteger(sequence) || sequence < 1) {
+      return NextResponse.json({ error: "sequence must be a positive integer" }, { status: 400 });
+    }
+  }
+
+  const result = await verifyVaultCid({ cid: params.cid, topicId, sequence, content, env });
+  return NextResponse.json({
+    ...result,
+    matchCount: result.matches.length,
+    exitCode: EXIT_CODES[result.verdict],
+    matches: result.matches.map((m) => ({
+      ...m,
+      mirrorMessageUrl: mirrorTopicMessageUrl(topicId, m.sequenceNumber, env.mirrorNodeUrl),
+      ipfsGatewayUrl: ipfsGatewayUrl(m.attestation.cid, env.ipfsGatewayUrl),
+    })),
+    mirror: {
+      baseUrl: env.mirrorNodeUrl,
+      listUrl: mirrorTopicMessagesUrl(topicId, { networkOrUrl: env.mirrorNodeUrl }),
+      messageUrl: sequence ? mirrorTopicMessageUrl(topicId, sequence, env.mirrorNodeUrl) : null,
+    },
+    hashScanTopicUrl: hashScanTopicUrl(topicId, env.network),
+  });
+}
+
+function errorResponse(err: unknown) {
+  return NextResponse.json(
+    { error: err instanceof Error ? err.message : String(err) },
+    { status: 500 },
+  );
 }
 
 /**
- * GET ?cid=...&topicId=...&sequence=... → Mirror Node verify
- * Accepts legacy attestations and schema v1 (schemaVersion / mime / prevCid).
+ * GET ?cid=…&topicId=…&sequence=…&content=skip
+ * Mirror Node lookup (legacy + schema v1), payer check, then downloads the CID from IPFS
+ * gateways and compares sha256 (and raw CIDs) to the HCS anchor. `content=skip` = HCS only.
  */
 export async function GET(req: NextRequest) {
   try {
-    const env = getVaultEnv();
-    const cid = (req.nextUrl.searchParams.get("cid") || "").trim();
-    const sequenceParam = (req.nextUrl.searchParams.get("sequence") || "").trim();
-    const topicId = (req.nextUrl.searchParams.get("topicId") || env.topicId).trim();
+    const q = req.nextUrl.searchParams;
+    const params = {
+      cid: (q.get("cid") || "").trim(),
+      topicId: (q.get("topicId") || "").trim(),
+      sequence: (q.get("sequence") || "").trim(),
+    };
+    return await respond(params, q.get("content") === "skip" ? { mode: "skip" } : { mode: "gateway" });
+  } catch (err) {
+    return errorResponse(err);
+  }
+}
 
-    if (!topicId) {
-      return NextResponse.json(
-        { error: "topicId required (query or HCS_TOPIC_ID)" },
-        { status: 400 },
-      );
+/**
+ * POST multipart { file, cid?, topicId?, sequence? }: compare a local copy of the document
+ * with the HCS anchor instead of downloading it (e.g. to prove a received file is untampered).
+ */
+export async function POST(req: NextRequest) {
+  try {
+    const form = await req.formData();
+    const file = form.get("file");
+    if (!file || typeof file === "string") {
+      return NextResponse.json({ error: "file is required" }, { status: 400 });
     }
-    if (!cid && !sequenceParam) {
-      return NextResponse.json(
-        { error: "cid and/or sequence query param required" },
-        { status: 400 },
-      );
+    if (file.size > DEFAULT_MAX_CONTENT_BYTES) {
+      return NextResponse.json({ error: "file too large" }, { status: 413 });
     }
-
-    const matches: MatchPayload[] = [];
-    let scannedCount = 0;
-    let mode: "sequence" | "scan" = "scan";
-
-    if (sequenceParam) {
-      mode = "sequence";
-      const seqNum = Number(sequenceParam);
-      if (!Number.isFinite(seqNum) || seqNum < 1) {
-        return NextResponse.json({ error: "sequence must be a positive integer" }, { status: 400 });
-      }
-      const msg = await fetchTopicMessageBySequence(topicId, seqNum);
-      scannedCount = msg ? 1 : 0;
-      if (msg) {
-        const base = matchFromMirrorMessage(msg, { topicId, network: env.network });
-        if (base) {
-          const match = enrich(base, topicId, env.network, env.mirrorNodeUrl, env.ipfsGatewayUrl);
-          if (!cid || match.attestation.cid === cid) {
-            matches.push(match);
-          } else if (cid && match.attestation.cid !== cid) {
-            return NextResponse.json({
-              topicId,
-              cid: cid || null,
-              sequence: seqNum,
-              mode,
-              matchCount: 0,
-              scannedCount,
-              matches: [],
-              mismatch: {
-                expectedCid: cid,
-                foundCid: match.attestation.cid,
-                sequenceNumber: match.sequenceNumber,
-                hashScanUrl: match.hashScanUrl,
-              },
-              mirror: {
-                baseUrl: env.mirrorNodeUrl,
-                listUrl: mirrorTopicMessagesUrl(topicId, { networkOrUrl: env.mirrorNodeUrl }),
-                messageUrl: mirrorTopicMessageUrl(topicId, seqNum, env.mirrorNodeUrl),
-              },
-              hashScanTopicUrl: hashScanTopicUrl(topicId, env.network),
-            });
-          }
-        }
-      }
-    } else {
-      const messages = await fetchTopicMessages(topicId, { limit: 100, order: "desc" });
-      scannedCount = messages.length;
-      for (const m of messages) {
-        const base = matchFromMirrorMessage(m, { topicId, network: env.network });
-        if (!base) continue;
-        if (base.attestation.cid === cid) {
-          matches.push(enrich(base, topicId, env.network, env.mirrorNodeUrl, env.ipfsGatewayUrl));
-        }
-      }
-    }
-
-    return NextResponse.json({
-      topicId,
-      cid: cid || null,
-      sequence: sequenceParam ? Number(sequenceParam) : null,
-      mode,
-      matchCount: matches.length,
-      scannedCount,
-      matches,
-      mirror: {
-        baseUrl: env.mirrorNodeUrl,
-        listUrl: mirrorTopicMessagesUrl(topicId, {
-          networkOrUrl: env.mirrorNodeUrl,
-          limit: 100,
-          order: "desc",
-        }),
-        messageUrl: sequenceParam
-          ? mirrorTopicMessageUrl(topicId, sequenceParam, env.mirrorNodeUrl)
-          : null,
-      },
-      hashScanTopicUrl: hashScanTopicUrl(topicId, env.network),
+    const bytes = new Uint8Array(await file.arrayBuffer());
+    const params = {
+      cid: String(form.get("cid") || "").trim(),
+      topicId: String(form.get("topicId") || "").trim(),
+      sequence: String(form.get("sequence") || "").trim(),
+    };
+    return await respond(params, {
+      mode: "bytes",
+      bytes,
+      source: { kind: "file", path: file.name || "upload" },
     });
   } catch (err) {
-    return NextResponse.json(
-      { error: err instanceof Error ? err.message : String(err) },
-      { status: 500 },
-    );
+    return errorResponse(err);
   }
 }

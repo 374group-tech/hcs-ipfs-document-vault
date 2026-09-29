@@ -1,167 +1,172 @@
 /**
- * CLI: verify a CID against HCS topic messages via Mirror Node.
+ * CLI: trustless verify of a CID against its HCS attestation (Mirror Node) and the IPFS bytes.
  *
  * Usage:
- *   yarn verify:proof <CID> [--topic 0.0.x] [--sequence N]
- *   yarn workspace @vault/nextjs verify:proof <CID>
+ *   yarn verify:proof <CID> [--topic 0.0.x] [--sequence N] [--file PATH | --skip-content] [--max-pages N]
  *
- * Env: HCS_TOPIC_ID (required unless --topic), HEDERA_MIRROR_NODE_URL, HEDERA_NETWORK
- * Exit: 0 on match, 1 on no match / error
+ * Env: HCS_TOPIC_ID (or --topic), HEDERA_MIRROR_NODE_URL, HEDERA_NETWORK,
+ *      IPFS_GATEWAY_URL, IPFS_GATEWAY_FALLBACKS, IPFS_GATEWAY_TIMEOUT_MS
+ * Exit codes: see EXIT_CODES in lib/vault-verify.ts and README "Verify states".
  */
-import {
-  findCidMatches,
-  matchFromMirrorMessage,
-  mirrorTopicMessagesUrl,
-  mirrorTopicMessageUrl,
-} from "@vault/ledger";
-import {
-  fetchTopicMessageBySequence,
-  fetchTopicMessages,
-} from "../lib/hedera";
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
 import { getVaultEnv } from "../lib/env";
+import {
+  EXIT_CODES,
+  verifyVaultCid,
+  type ContentInput,
+  type VerifiedMatch,
+} from "../lib/vault-verify";
 
-function usage(): never {
-  console.error(`Usage: yarn verify:proof <CID> [--topic 0.0.x] [--sequence N]
+const USAGE = `Usage: yarn verify:proof <CID> [--topic 0.0.x] [--sequence N] [--file PATH | --skip-content] [--max-pages N]
 
-Fetches Mirror Node HCS messages for the topic, finds an attestation matching CID
-(legacy or schema v1). Prints match, sequence, consensus timestamp, HashScan URL, sha256.
+1. Finds the CID's HCS attestation via Mirror Node (--sequence, or pages through all messages).
+2. Compares the attestation's self-declared payer with Mirror payer_account_id.
+3. Downloads the bytes from IPFS gateways (or reads --file), recomputes sha256 (and raw CIDs)
+   and compares them to the sha256 anchored on HCS.
 
-Env: HCS_TOPIC_ID (or --topic), HEDERA_MIRROR_NODE_URL, HEDERA_NETWORK
-Exit codes: 0 = match, 1 = no match / error`);
+Exit codes:
+  0  match (or HCS-only match with --skip-content)
+  1  not anchored on the topic / usage or network error
+  2  hash-mismatch: bytes do not match the anchored sha256 (tampered)
+  3  content-unavailable: anchored on HCS, but no gateway returned the bytes
+  4  payer-mismatch: attestation payer differs from the account that paid for the message`;
+
+function fail(msg: string): never {
+  console.error(`error: ${msg}\n\n${USAGE}`);
   process.exit(1);
 }
 
-function parseArgs(argv: string[]): {
+type Args = {
   cid: string;
   topicId?: string;
   sequence?: number;
-} {
-  const args = argv.slice(2);
-  let cid = "";
-  let topicId: string | undefined;
-  let sequence: number | undefined;
+  file?: string;
+  skipContent: boolean;
+  maxPages?: number;
+};
 
+function positiveInt(flag: string, v: string | undefined): number {
+  const n = Number(v);
+  if (!Number.isInteger(n) || n < 1) fail(`${flag} must be a positive integer`);
+  return n;
+}
+
+function parseArgs(argv: string[]): Args {
+  const args = argv.slice(2);
+  const out: Args = { cid: "", skipContent: false };
   for (let i = 0; i < args.length; i++) {
     const a = args[i];
     if (a === "--") continue; // yarn may forward the separator
-    if (a === "--help" || a === "-h") usage();
-    if (a === "--topic" || a === "-t") {
-      topicId = args[++i];
-      continue;
-    }
-    if (a === "--sequence" || a === "-s") {
-      const n = Number(args[++i]);
-      if (!Number.isFinite(n) || n < 1) {
-        console.error("error: --sequence must be a positive integer");
-        process.exit(1);
-      }
-      sequence = n;
-      continue;
-    }
-    if (a.startsWith("-")) {
-      console.error(`error: unknown flag ${a}`);
-      usage();
-    }
-    if (!cid) cid = a;
-    else {
-      console.error("error: unexpected extra argument:", a);
-      usage();
-    }
-  }
-  if (!cid) usage();
-  return { cid, topicId, sequence };
-}
-
-async function main() {
-  const { cid, topicId: topicArg, sequence } = parseArgs(process.argv);
-  const env = getVaultEnv();
-  const topicId = (topicArg || env.topicId || "").trim();
-  if (!topicId) {
-    console.error("error: HCS_TOPIC_ID (or --topic) is required");
-    process.exit(1);
-  }
-
-  console.log(`cid=${cid}`);
-  console.log(`topicId=${topicId}`);
-  console.log(`mirror=${env.mirrorNodeUrl}`);
-  if (sequence) console.log(`sequence=${sequence}`);
-
-  try {
-    if (sequence) {
-      const url = mirrorTopicMessageUrl(topicId, sequence, env.mirrorNodeUrl);
-      console.log(`fetch=${url}`);
-      const msg = await fetchTopicMessageBySequence(topicId, sequence);
-      if (!msg) {
-        console.log("match=no");
-        console.error(`No message at sequence ${sequence}`);
-        process.exit(1);
-      }
-      const match = matchFromMirrorMessage(msg, { topicId, network: env.network });
-      if (!match) {
-        console.log("match=no");
-        console.error("Message at sequence is not a vault attestation");
-        process.exit(1);
-      }
-      if (match.attestation.cid !== cid) {
-        console.log("match=no");
-        console.log(`foundCid=${match.attestation.cid}`);
-        console.log(`sequence=${match.sequenceNumber}`);
-        console.log(`consensusTimestamp=${match.consensusTimestamp}`);
-        console.log(`hashScanUrl=${match.hashScanUrl}`);
-        console.error(`CID mismatch: expected ${cid}, found ${match.attestation.cid}`);
-        process.exit(1);
-      }
-      printMatch(match);
+    if (a === "--help" || a === "-h") {
+      console.log(USAGE);
       process.exit(0);
     }
+    if (a === "--topic" || a === "-t") out.topicId = args[++i];
+    else if (a === "--sequence" || a === "-s") out.sequence = positiveInt(a, args[++i]);
+    else if (a === "--max-pages") out.maxPages = positiveInt(a, args[++i]);
+    else if (a === "--file" || a === "-f") out.file = args[++i];
+    else if (a === "--skip-content") out.skipContent = true;
+    else if (a.startsWith("-")) fail(`unknown flag ${a}`);
+    else if (!out.cid) out.cid = a;
+    else fail(`unexpected extra argument: ${a}`);
+  }
+  if (!out.cid) fail("CID is required");
+  if (out.file && out.skipContent) fail("--file and --skip-content are mutually exclusive");
+  return out;
+}
 
-    const listUrl = mirrorTopicMessagesUrl(topicId, {
-      networkOrUrl: env.mirrorNodeUrl,
-      limit: 100,
-      order: "desc",
-    });
-    console.log(`fetch=${listUrl}`);
-    const messages = await fetchTopicMessages(topicId, { limit: 100, order: "desc" });
-    const matches = findCidMatches(messages, cid, { topicId, network: env.network });
-    console.log(`scanned=${messages.length}`);
-    if (matches.length === 0) {
-      console.log("match=no");
-      console.error(`No attestation matching cid=${cid} in last ${messages.length} messages`);
-      process.exit(1);
-    }
-    // Prefer newest (desc order → first)
-    printMatch(matches[0]);
-    if (matches.length > 1) {
-      console.log(`additionalMatches=${matches.length - 1}`);
-    }
-    process.exit(0);
+function contentInput(args: Args): ContentInput {
+  if (args.skipContent) return { mode: "skip" };
+  if (!args.file) return { mode: "gateway" };
+  // The script runs inside packages/nextjs: resolve relative paths from the repo root
+  // (yarn sets PROJECT_CWD; npm sets INIT_CWD to the caller's directory).
+  const base = process.env.PROJECT_CWD || process.env.INIT_CWD || process.cwd();
+  const path = resolve(base, args.file);
+  try {
+    return { mode: "bytes", bytes: readFileSync(path), source: { kind: "file", path } };
   } catch (e) {
-    console.log("match=no");
-    console.error(e instanceof Error ? e.message : String(e));
-    process.exit(1);
+    fail(`cannot read --file ${path}: ${e instanceof Error ? e.message : String(e)}`);
   }
 }
 
-function printMatch(match: {
-  attestation: { cid: string; sha256: string; schemaVersion?: number; prevCid?: string; mime?: string };
-  sequenceNumber: number;
-  consensusTimestamp: string;
-  consensusTimestampIso: string;
-  hashScanUrl: string;
-}) {
-  console.log("match=yes");
-  console.log(`sequence=${match.sequenceNumber}`);
-  console.log(`consensusTimestamp=${match.consensusTimestamp}`);
-  console.log(`consensusTimestampIso=${match.consensusTimestampIso}`);
-  console.log(`hashScanUrl=${match.hashScanUrl}`);
-  console.log(`sha256=${match.attestation.sha256}`);
-  if (match.attestation.schemaVersion !== undefined) {
-    console.log(`schemaVersion=${match.attestation.schemaVersion}`);
+function printMatch(m: VerifiedMatch) {
+  const a = m.attestation;
+  console.log(`sequence=${m.sequenceNumber}`);
+  console.log(`consensusTimestamp=${m.consensusTimestamp}`);
+  console.log(`consensusTimestampIso=${m.consensusTimestampIso}`);
+  console.log(`hashScanUrl=${m.hashScanUrl}`);
+  console.log(`schemaVersion=${a.schemaVersion ?? "legacy"}`);
+  if (a.mime) console.log(`mime=${a.mime}`);
+  if (a.prevCid) console.log(`prevCid=${a.prevCid}`);
+  console.log(`payer=${a.payer}`);
+  console.log(`mirrorPayer=${m.payerAccountId ?? "unknown"}`);
+  console.log(`payerCheck=${m.payerCheck}`);
+  console.log(`sha256=${a.sha256}`);
+  const c = m.content;
+  if (!c) {
+    console.log("content=skipped");
+    return;
+  }
+  for (const at of c.attempts) console.log(`gatewayFailed=${at.url} (${at.error})`);
+  console.log(`content=${c.state}`);
+  if (c.state === "unavailable") return;
+  console.log(`contentSource=${c.source.kind === "file" ? c.source.path : c.source.url}`);
+  console.log(`computedSha256=${c.computedSha256}`);
+  console.log(`size=${c.actualSize} (anchored ${c.expectedSize})`);
+  if (c.cid.status === "not-recomputable") {
+    console.log(`cidCheck=not-recomputable (${c.cid.reason})`);
   } else {
-    console.log("schemaVersion=legacy");
+    console.log(`cidCheck=${c.cid.status}`);
+    console.log(`computedCid=${c.cid.computedCid}`);
   }
-  if (match.attestation.mime) console.log(`mime=${match.attestation.mime}`);
-  if (match.attestation.prevCid) console.log(`prevCid=${match.attestation.prevCid}`);
 }
 
-main();
+const VERDICT_MESSAGES: Record<string, string> = {
+  "not-anchored": "No vault attestation for this CID on the topic.",
+  "hash-mismatch": "TAMPERED: the bytes do not match the sha256 anchored on HCS.",
+  "content-unavailable":
+    "Anchored on HCS, but no gateway returned the bytes (try IPFS_GATEWAY_FALLBACKS or --file).",
+  "payer-mismatch":
+    "The attestation's payer field does not match the account that paid for the HCS message.",
+};
+
+async function main() {
+  const args = parseArgs(process.argv);
+  const env = getVaultEnv();
+  const topicId = (args.topicId || env.topicId || "").trim();
+  if (!topicId) fail("HCS_TOPIC_ID (or --topic) is required");
+
+  console.log(`cid=${args.cid}`);
+  console.log(`topicId=${topicId}`);
+  console.log(`mirror=${env.mirrorNodeUrl}`);
+
+  const r = await verifyVaultCid({
+    cid: args.cid,
+    topicId,
+    sequence: args.sequence,
+    content: contentInput(args),
+    maxPages: args.maxPages,
+    env,
+  });
+
+  console.log(`mode=${r.mode}`);
+  console.log(`scanned=${r.scannedCount} pages=${r.pages}${r.truncated ? " (truncated)" : ""}`);
+  if (r.mismatch) {
+    console.log(`foundCid=${r.mismatch.foundCid}`);
+    console.log(`hashScanUrl=${r.mismatch.hashScanUrl}`);
+    console.error(`CID mismatch at sequence ${r.mismatch.sequenceNumber}`);
+  }
+  console.log(`match=${r.primary ? "yes" : "no"}`);
+  if (r.primary) printMatch(r.primary);
+  if (r.matches.length > 1) console.log(`additionalMatches=${r.matches.length - 1}`);
+  console.log(`verdict=${r.verdict}`);
+  if (VERDICT_MESSAGES[r.verdict]) console.error(VERDICT_MESSAGES[r.verdict]);
+  process.exit(EXIT_CODES[r.verdict]);
+}
+
+main().catch((e) => {
+  console.log("verdict=error");
+  console.error(e instanceof Error ? e.message : String(e));
+  process.exit(1);
+});

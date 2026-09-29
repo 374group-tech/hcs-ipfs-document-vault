@@ -33,7 +33,8 @@ export default function HomePage() {
             <div>
               <strong>Verify</strong> — UI paste CID, or CLI{" "}
               <code className="mono">yarn verify:proof &lt;CID&gt;</code> → Mirror Node match (legacy + v1)
-              + HashScan + fetch-from-IPFS.
+              + payer check, then the bytes are downloaded from IPFS and their sha256 / CID recomputed
+              against the HCS anchor (match · tampered · unavailable).
             </div>
           </div>
         </div>

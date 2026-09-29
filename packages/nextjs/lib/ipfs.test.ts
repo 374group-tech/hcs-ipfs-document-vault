@@ -46,7 +46,7 @@ describe("IPFS providers", () => {
     expect(result.cid).toBe("bafkreif7ckqfqbizpthadxlizpgwlgujq6lv3uj26ef2bshy4n2kyd2yny");
     expect(result.size).toBe(4);
     expect(fetchSpy).toHaveBeenCalledTimes(1);
-    const [url, init] = fetchSpy.mock.calls[0] as [string, RequestInit];
+    const [url, init] = fetchSpy.mock.calls[0] as unknown as [string, RequestInit];
     expect(url).toContain("pinata.cloud");
     expect(init.method).toBe("POST");
     expect((init.headers as Record<string, string>).Authorization).toBe("Bearer test-jwt");
@@ -75,7 +75,7 @@ describe("IPFS providers", () => {
     expect(result.source).toBe("kubo");
     expect(result.cid.startsWith("bafy")).toBe(true);
     expect(fetchSpy).toHaveBeenCalledTimes(1);
-    const [url] = fetchSpy.mock.calls[0] as [string];
+    const [url] = fetchSpy.mock.calls[0] as unknown as [string];
     expect(url).toContain("/api/v0/add");
   });
 });

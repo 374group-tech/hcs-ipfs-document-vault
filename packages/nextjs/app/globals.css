@@ -78,6 +78,7 @@ button.secondary {
   background: #243056; color: var(--muted); font-size: 0.75rem;
 }
 .ok { color: var(--ok); }
+.warn { color: var(--warn); }
 .err { color: var(--err); }
 .muted { color: var(--muted); }
 pre {
