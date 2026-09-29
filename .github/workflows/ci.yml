@@ -19,8 +19,8 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
         with:
           node-version: 20
           cache: yarn
@@ -45,8 +45,8 @@ jobs:
       TOPIC: "0.0.10600873"
       CID5: bafkreihbeveqd5e6z7sry2zjyxqfzzjcoc6efxnj4isnb47tyt5xnedlru
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
         with:
           node-version: 20
           cache: yarn
@@ -82,7 +82,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v5
         with:
           node-version: 20
       - name: Git identity for the scaffold's initial commit
@@ -96,7 +96,7 @@ jobs:
             --template ${{ github.repository }} \
             -f nextjs-app -s hardhat --package-manager yarn --network testnet \
             --ci --skip-install --skip-hedera-skills
-          test -f vault-app/template.json && test -d vault-app/packages/ledger
+          test -f vault-app/package.json && test -f vault-app/docs/examples/agreement-seq5-tampered.txt && test -d vault-app/packages/ledger
       - name: Install and test the scaffolded app
         working-directory: ${{ runner.temp }}/vault-app
         run: |
