@@ -28,7 +28,6 @@ export type VaultEnv = {
   pinTokenId: string;
   pinFeeAmount: string;
   pinTreasuryAccountId: string;
-  pinFeeContractAddress: string;
   hashScanBase: string;
 };
 
@@ -60,10 +59,6 @@ export function getVaultEnv(): VaultEnv {
     pinFeeAmount: process.env.PIN_FEE_AMOUNT || process.env.NEXT_PUBLIC_PIN_FEE_AMOUNT || "",
     pinTreasuryAccountId:
       process.env.PIN_TREASURY_ACCOUNT_ID || process.env.NEXT_PUBLIC_PIN_TREASURY_ACCOUNT_ID || "",
-    pinFeeContractAddress:
-      process.env.PIN_FEE_CONTRACT_ADDRESS ||
-      process.env.NEXT_PUBLIC_PIN_FEE_CONTRACT_ADDRESS ||
-      "",
     hashScanBase:
       process.env.NEXT_PUBLIC_HASHSCAN_BASE ||
       `https://hashscan.io/${network}`,

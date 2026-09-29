@@ -3,7 +3,10 @@ pragma solidity ^0.8.24;
 
 /**
  * @title PinFeeCollector
- * @notice Thin non-custodial pin-fee sink for the HCS-IPFS document vault.
+ * @notice REFERENCE ONLY (not deployed, not called by the app). The app's pin fee uses native
+ *         Hedera transfers / HIP-336 allowances via the SDK. This contract shows the equivalent
+ *         EVM path for builders who want an on-chain fee sink; deploy it yourself if needed.
+ *         Thin non-custodial pin-fee sink for the HCS-IPFS document vault.
  * @dev Payer sends HBAR (native) or an HTS/ERC-20 style token directly to the
  *      configured treasury. The contract never holds user funds as an intermediary
  *      hop beyond the atomic call: value/tokens move payer → treasury in one tx.

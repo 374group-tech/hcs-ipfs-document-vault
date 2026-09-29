@@ -86,10 +86,6 @@
         "description": "Optional treasury account that receives the pin fee"
       },
       {
-        "key": "PIN_FEE_CONTRACT_ADDRESS",
-        "description": "Optional deployed PinFeeCollector EVM address"
-      },
-      {
         "key": "NEXT_PUBLIC_HEDERA_NETWORK",
         "description": "Public network label for HashScan links"
       },

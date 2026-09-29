@@ -159,14 +159,10 @@ async function maybePayPinFee(
 
   const tokenId = TokenId.fromString(env.pinTokenId);
 
-  // HIP-336: payer approves treasury (or contract) as spender for the pin amount.
-  // Then a payer-signed CryptoTransfer moves tokens payer → treasury (non-custodial).
-  const spender = env.pinFeeContractAddress
-    ? AccountId.fromString(env.pinTreasuryAccountId)
-    : treasury;
-
+  // HIP-336: payer approves the treasury as spender for the pin amount, then a payer-signed
+  // CryptoTransfer moves tokens payer → treasury (non-custodial, no contract involved).
   const approve = await new AccountAllowanceApproveTransaction()
-    .approveTokenAllowance(tokenId, payer, spender, amount)
+    .approveTokenAllowance(tokenId, payer, treasury, amount)
     .freezeWith(client)
     .execute(client);
   const approveReceipt = await approve.getReceipt(client);
