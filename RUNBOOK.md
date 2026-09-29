@@ -77,6 +77,9 @@ After attest (wait a few seconds for Mirror lag):
 ```bash
 yarn verify:proof <CID>                 # uses HCS_TOPIC_ID from .env
 yarn verify:proof <CID> --topic 0.0.x --sequence N
+yarn verify:proof <CID> --sequence N --file ./copy.bin    # compare a local copy
+yarn verify:proof <CID> --sequence N --skip-content      # HCS anchor only
+# exit: 0 match · 1 not anchored/error · 2 hash-mismatch (tampered) · 3 content-unavailable · 4 payer-mismatch
 ```
 
 Expect `match=yes`, `sequence`, `consensusTimestamp`, `hashScanUrl`, `sha256`. Schema v1 messages also print `schemaVersion` / `mime` / `prevCid`. Exit `0` on match, `1` otherwise. Accepts **legacy** messages without `schemaVersion`.
@@ -107,7 +110,7 @@ PIN_TREASURY_ACCOUNT_ID=0.0.TREASURY
 
 4. Re-run `yarn demo:attest` — logs should show `pinFee={…}` with allowance + transfer tx ids.
 
-Optional contract path:
+Reference contract (not deployed by this template, not used by the app — see README "Pin fee"):
 
 ```bash
 yarn hardhat:compile
@@ -133,6 +136,7 @@ All three should exit 0 before submission.
 | `IPFS API unreachable` (Kubo) | Start `ipfs daemon`, check `IPFS_API_URL=http://127.0.0.1:5001` |
 | Pinata auth / pin fails | Set `IPFS_PROVIDER=pinata` and `PINATA_JWT` (never commit); or use Kubo / dry-run CID |
 | `yarn verify:proof` → match=no | Confirm topic; wait for Mirror lag; try `--sequence N` |
+| `verdict=content-unavailable` | Gateways 429/timeout: add `IPFS_GATEWAY_FALLBACKS=http://127.0.0.1:8080/ipfs` (local Kubo) or use `--file` |
 | `HCS_TOPIC_ID is required` | `yarn demo:topic` |
 | `Unable to parse HEDERA_PRIVATE_KEY` | Use ECDSA or ED25519 hex/DER from the portal; no quotes |
 | Mirror verify empty | Wait a few seconds after submit; confirm topic id |

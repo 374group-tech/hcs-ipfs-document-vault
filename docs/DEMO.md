@@ -1,6 +1,6 @@
 # Demo walkthrough (judges / developers)
 
-Five minutes from clone → HashScan proof → `yarn verify:proof`. Screenshots are placeholders — drop real captures under `docs/assets/` if you record them.
+Five minutes from clone → HashScan proof → trustless `yarn verify:proof`. Screenshots: [below](#screenshots).
 
 ## Path (CLI)
 
@@ -17,7 +17,7 @@ ipfs daemon &            # or IPFS_PROVIDER=pinata + PINATA_JWT; or DEMO_PRECOMP
 yarn demo:attest         # prints sequenceNumber + HashScan (writes schema v1)
 # Optional revision chain:
 # DEMO_PREV_CID=<priorCid> DEMO_MIME=text/plain yarn demo:attest
-yarn verify:proof <CID>  # Mirror Node match → exit 0/1 (accepts legacy + schema v1)
+yarn verify:proof <CID>  # HCS anchor + payer check + IPFS bytes → exit 0 match / 2 tampered / 3 unavailable (legacy + schema v1)
 ```
 
 Dry-run (HCS-only, no Kubo/Pinata):
@@ -56,37 +56,40 @@ sequenceDiagram
   UI->>IPFS: fetch gateway URL
 ```
 
-## Screenshot placeholders
+## Screenshots
 
-| Step | Placeholder | What to capture |
-| --- | --- | --- |
-| 1. Upload | `![upload](./assets/01-upload.png)` | `/upload` with file chosen / CID shown |
-| 2. Attest result | `![attest](./assets/02-attest.png)` | Sequence number + HashScan link + schema v1 JSON |
-| 3. Verify match | `![verify](./assets/03-verify.png)` | Topic / seq / consensus timestamp / HashScan |
-| 4. CLI verify | `![cli](./assets/04-verify-proof.png)` | `yarn verify:proof` stdout `match=yes` |
-| 5. HashScan | `![hashscan](./assets/05-hashscan.png)` | Topic message page on testnet |
+Captured from `yarn next:start` with headless Chromium (2026-09-29): [docs/screenshots](./screenshots/).
 
-PNG captures are optional — see [assets/README.md](./assets/README.md). Until then, Mermaid + [architecture.svg](./assets/architecture.svg) + README Status HashScan links are enough for judges.
+| Home | Upload |
+| --- | --- |
+| ![home](./screenshots/home.png) | ![upload](./screenshots/upload.png) |
+| **Verify seq 5: match** | **Verify seq 5 with the tampered file: hash-mismatch** |
+| ![verify match](./screenshots/verify-match.png) | ![verify tampered](./screenshots/verify-tampered.png) |
+
+In the match capture, ipfs.io answered HTTP 429 and the local Kubo gateway (`IPFS_GATEWAY_FALLBACKS`) served the bytes.
+The page lists the failed attempts.
 
 ## Exact judge path (live proofs)
 
 Use the public topic and CIDs already attested on testnet (see README Status). No faucet keys required for verify.
 
 ```bash
-# Schema v1 (seq 5, attested in the demo video) — expect match=yes, prevCid = seq 4 CID
-yarn verify:proof bafkreihbeveqd5e6z7sry2zjyxqfzzjcoc6efxnj4isnb47tyt5xnedlru \
-  --topic 0.0.10600873 --sequence 5
+# Schema v1 (seq 5, demo video): download from IPFS gateways, recompute sha256 + raw CID
+#   expect verdict=match (exit 0), or content-unavailable (exit 3) if every gateway rate-limits you
+yarn verify:proof bafkreihbeveqd5e6z7sry2zjyxqfzzjcoc6efxnj4isnb47tyt5xnedlru --topic 0.0.10600873 --sequence 5
 
-# Schema v1 (seq 4) — expect match=yes, schemaVersion=1, prevCid set
-yarn verify:proof bafkreic5ywzvohvo6kbiuym2q57omcfruwgfrbekfip73h33jqjdolgdaq \
-  --topic 0.0.10600873 --sequence 4
+# Same anchor, bundled copies (offline, deterministic): original → match (0), tampered → hash-mismatch (2)
+yarn verify:proof bafkreihbeveqd5e6z7sry2zjyxqfzzjcoc6efxnj4isnb47tyt5xnedlru --topic 0.0.10600873 --sequence 5 --file docs/examples/agreement-seq5.txt
+yarn verify:proof bafkreihbeveqd5e6z7sry2zjyxqfzzjcoc6efxnj4isnb47tyt5xnedlru --topic 0.0.10600873 --sequence 5 --file docs/examples/agreement-seq5-tampered.txt
 
-# Legacy (seq 3) — expect match=yes, schemaVersion=legacy
-yarn verify:proof bafkreif7ckqfqbizpthadxlizpgwlgujq6lv3uj26ef2bshy4n2kyd2yny \
-  --topic 0.0.10600873 --sequence 3
+# Schema v1 (seq 4): expect schemaVersion=1, prevCid set, payerCheck=match
+yarn verify:proof bafkreic5ywzvohvo6kbiuym2q57omcfruwgfrbekfip73h33jqjdolgdaq --topic 0.0.10600873 --sequence 4
+
+# Legacy (seq 3): expect schemaVersion=legacy, verdict=match with the bundled bytes
+yarn verify:proof bafkreif7ckqfqbizpthadxlizpgwlgujq6lv3uj26ef2bshy4n2kyd2yny --topic 0.0.10600873 --sequence 3 --file docs/examples/demo-seq3.txt
 ```
 
 HashScan: [seq 5 (schema v1, demo video)](https://hashscan.io/testnet/transaction/1790452500.354841883) · [seq 4 (schema v1)](https://hashscan.io/testnet/transaction/1790146037.223851181) · [seq 3 (legacy)](https://hashscan.io/testnet/transaction/1789747927.579637159) · [all messages](https://hashscan.io/testnet/topic/0.0.10600873/messages) · [topic](https://hashscan.io/testnet/topic/0.0.10600873).
 
-Architecture diagram (no screenshots required): [assets/architecture.svg](./assets/architecture.svg). Screenshot checklist: [assets/README.md](./assets/README.md).
+Architecture diagram: [assets/architecture.svg](./assets/architecture.svg). Verify states and exit codes: [README](../README.md#verify-states).
 

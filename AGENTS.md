@@ -27,7 +27,7 @@ yarn demo:topic               # → HCS_TOPIC_ID
 ipfs daemon &                 # or DEMO_PRECOMPUTED_CID dry-run; or IPFS_PROVIDER=pinata + PINATA_JWT
 yarn demo:attest              # → sequence + HashScan URL (writes schema v1)
 # DEMO_PREV_CID=<prior> DEMO_MIME=text/plain yarn demo:attest   # optional revision chain
-yarn verify:proof <CID>       # Mirror Node match → exit 0/1 (legacy + v1)
+yarn verify:proof <CID>       # trustless: HCS anchor + payer + IPFS bytes → exit 0/1/2/3/4 (legacy + v1)
 yarn next:dev                 # /upload → /verify
 ```
 
@@ -38,10 +38,10 @@ Gate: `yarn lint && yarn test && yarn build`.
 | Path | Responsibility |
 | --- | --- |
 | `packages/ledger` | Pure TS: sha256, attestation schema, HashScan/Mirror/IPFS URLs, bigint money. **No network I/O.** |
-| `packages/hardhat` | Optional `PinFeeCollector.sol` + deploy/tests. Non-custodial pin fee sink. |
+| `packages/hardhat` | Reference-only `PinFeeCollector.sol` + tests (not deployed, not used by the app). |
 | `packages/nextjs` | App Router UI (`/`, `/upload`, `/verify`), API routes, `demo:attest` / `demo:topic` / `verify:proof` scripts. |
-| `docs/DEMO.md` | Judge-facing walkthrough + Mermaid + exact `verify:proof` on seq 4/3. |
-| `docs/assets/` | `architecture.svg` + screenshot capture checklist (`README.md`). |
+| `docs/DEMO.md` | Judge-facing walkthrough + Mermaid + exact `verify:proof` (match + tampered). |
+| `docs/assets/` | `architecture.svg`. `docs/screenshots/` UI PNGs; `docs/examples/` original + tampered verify fixtures. |
 | `docs/SCHEMA.md` | HCS attestation schema v1 + legacy compatibility. |
 | `template.json` | create-scaffold-hbar manifest. `envVars` = `{key, description}` only. |
 | `.env.example` | Documented env — **never commit `.env`**. |
@@ -86,7 +86,7 @@ Flow: **upload → CID → sha256 → HCS attest → verify (Mirror/HashScan / C
 - `@hashgraph/sdk`: `TopicCreateTransaction`, `TopicMessageSubmitTransaction`
 - Mirror Node REST: `/api/v1/topics/{id}/messages` (+ optional `…/messages/{seq}`)
 - Optional HIP-336: `AccountAllowanceApproveTransaction` + `TransferTransaction`
-- Optional EVM: `PinFeeCollector` (`payPinHbar` / `payPinToken`)
+- Reference EVM contract (not deployed): `PinFeeCollector` (`payPinHbar` / `payPinToken`)
 
 ## Definition of done
 
