@@ -9,6 +9,8 @@ export default defineConfig({
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "."),
+      // Test against ledger sources so `yarn test` does not depend on a prior ledger build.
+      "@vault/ledger": path.resolve(__dirname, "../ledger/src/index.ts"),
     },
   },
 });

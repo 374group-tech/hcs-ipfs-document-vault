@@ -6,7 +6,7 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint",
+    "lint": "next lint && tsc --noEmit",
     "format": "prettier --write \"app/**/*.{ts,tsx,css}\" \"lib/**/*.ts\" \"scripts/**/*.ts\"",
     "check-types": "tsc --noEmit",
     "demo:attest": "tsx --env-file=../../.env scripts/demo-attest.ts",

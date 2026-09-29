@@ -57,15 +57,17 @@ function stubFetch(...routes: Route[]) {
   return spy;
 }
 
+const toArrayBuffer = (b: Buffer) =>
+  b.buffer.slice(b.byteOffset, b.byteOffset + b.byteLength) as ArrayBuffer;
 const json = (o: unknown) => new Response(JSON.stringify(o), { status: 200 });
 const bySequence =
   (msg: ReturnType<typeof attestationMessage>): Route =>
   (url) =>
     url === `${MIRROR}/api/v1/topics/${TOPIC}/messages/${msg.sequence_number}` ? json(msg) : undefined;
 const gateway =
-  (prefix: string, body: Uint8Array | null, status = 200): Route =>
+  (prefix: string, body: Buffer | null, status = 200): Route =>
   (url) =>
-    url.startsWith(prefix) ? new Response(body, { status }) : undefined;
+    url.startsWith(prefix) ? new Response(body ? toArrayBuffer(body) : null, { status }) : undefined;
 
 describe("verifyVaultCid", () => {
   afterEach(() => vi.unstubAllGlobals());

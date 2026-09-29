@@ -26,6 +26,8 @@ jobs:
           cache: yarn
       - name: Install
         run: yarn install --immutable
+      - name: Build @vault/ledger (dist consumed by nextjs + hardhat)
+        run: yarn workspace @vault/ledger build
       - name: Lint (tsc, solhint, next lint)
         run: yarn lint
       - name: Test (ledger vitest, hardhat mocha, nextjs vitest)
@@ -49,6 +51,7 @@ jobs:
           node-version: 20
           cache: yarn
       - run: yarn install --immutable
+      - run: yarn workspace @vault/ledger build
       - name: HCS anchors for seq 1-5 (legacy + schema v1), content skipped
         run: |
           set -e
@@ -98,5 +101,6 @@ jobs:
         working-directory: ${{ runner.temp }}/vault-app
         run: |
           yarn install
+          yarn workspace @vault/ledger build
           yarn workspace @vault/ledger test
           yarn workspace @vault/nextjs test
