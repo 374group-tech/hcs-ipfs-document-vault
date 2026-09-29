@@ -15,8 +15,23 @@ export type MirrorMessageLike = {
   payer_account_id?: string;
 };
 
+/**
+ * `payer` inside the JSON is self-declared by whoever submitted the message; Mirror Node's
+ * `payer_account_id` is the account that actually paid for (signed) the transaction.
+ * - match: they agree
+ * - mismatch: someone else posted a message claiming this payer (flag as untrusted)
+ * - unknown: Mirror response did not include payer_account_id
+ */
+export type PayerCheck = "match" | "mismatch" | "unknown";
+
+export function checkPayer(declaredPayer: string, mirrorPayer?: string): PayerCheck {
+  if (!mirrorPayer) return "unknown";
+  return declaredPayer === mirrorPayer ? "match" : "mismatch";
+}
+
 export type CidMatch = {
   attestation: VaultAttestation;
+  payerCheck: PayerCheck;
   topicId: string;
   sequenceNumber: number;
   consensusTimestamp: string;
@@ -48,6 +63,7 @@ export function matchFromMirrorMessage(
   const network = opts.network ?? "testnet";
   return {
     attestation: parsed.value,
+    payerCheck: checkPayer(parsed.value.payer, m.payer_account_id),
     topicId,
     sequenceNumber: seq,
     consensusTimestamp: m.consensus_timestamp,
@@ -71,4 +87,42 @@ export function findCidMatches(
     if (match && match.attestation.cid === cid) out.push(match);
   }
   return out;
+}
+
+/** Mirror Node list response (`GET /api/v1/topics/{id}/messages`). */
+export type MirrorMessagesPage<M extends MirrorMessageLike = MirrorMessageLike> = {
+  messages?: M[];
+  links?: { next?: string | null };
+};
+
+export type PagedMessages<M extends MirrorMessageLike = MirrorMessageLike> = {
+  messages: M[];
+  pages: number;
+  /** true when maxPages was reached while Mirror still returned a `links.next`. */
+  truncated: boolean;
+};
+
+export const DEFAULT_MIRROR_MAX_PAGES = 50;
+
+/**
+ * Follow Mirror Node `links.next` (a path relative to the Mirror base URL) until exhausted
+ * or `maxPages` is reached. `fetchPage` returns the parsed JSON for one URL.
+ */
+export async function collectMirrorPages<M extends MirrorMessageLike>(
+  firstUrl: string,
+  fetchPage: (url: string) => Promise<MirrorMessagesPage<M>>,
+  opts: { maxPages?: number } = {},
+): Promise<PagedMessages<M>> {
+  const maxPages = opts.maxPages ?? DEFAULT_MIRROR_MAX_PAGES;
+  const messages: M[] = [];
+  let url: string | null = firstUrl;
+  let pages = 0;
+  while (url && pages < maxPages) {
+    const page: MirrorMessagesPage<M> = await fetchPage(url);
+    pages++;
+    messages.push(...(page.messages ?? []));
+    const next = page.links?.next;
+    url = next ? new URL(next, firstUrl).toString() : null;
+  }
+  return { messages, pages, truncated: url !== null };
 }
