@@ -41,7 +41,7 @@ https://github.com/374group-tech/hcs-ipfs-document-vault
 ### Any other links
 
 ```text
-Demo video: <YouTube Unlisted link>
+Demo video: https://youtu.be/v6cNP-GSxfg
 Install: npm create scaffold-hbar@latest -- vault-app --template 374group-tech/hcs-ipfs-document-vault
 CI: https://github.com/374group-tech/hcs-ipfs-document-vault/actions/workflows/ci.yml
 HCS topic (testnet): https://hashscan.io/testnet/topic/0.0.10600873
@@ -58,7 +58,7 @@ Submit-key topic (testnet): https://hashscan.io/testnet/topic/0.0.10775303
 
 ### Video demo / Developer Experience
 
-- Video demo (required, < 5 min): YouTube Unlisted link to the 3:29 screencast (upload → attest seq 5 → HashScan → verify UI + `yarn verify:proof`) (**founder**).
+- Video demo (required, < 5 min): https://youtu.be/v6cNP-GSxfg (YouTube Unlisted, 4:13 screencast: upload → attest seq 5 → HashScan → verify UI + `yarn verify:proof`).
 - Developer Experience is **not** a separate survey: it is the last section of the same Google Form (five required 1–10 ratings + three optional text questions) (**founder**).
 
 ---
@@ -73,7 +73,7 @@ Submit-key topic (testnet): https://hashscan.io/testnet/topic/0.0.10775303
 | Submission Details | Project Name | block above |
 | Submission Details | Project Description (3 sentences max) | block above |
 | Submission Details | Project GitHub URL | `https://github.com/374group-tech/hcs-ipfs-document-vault` |
-| Submission Details | Video demo (< 5 min) | YouTube link (**founder**) |
+| Submission Details | Video demo (< 5 min) | `https://youtu.be/v6cNP-GSxfg` |
 | Submission Details | Any other links (optional) | block above |
 | Developer Experience | 5 ratings (1–10) + 3 optional texts | **founder** |
 
@@ -86,7 +86,7 @@ Submit-key topic (testnet): https://hashscan.io/testnet/topic/0.0.10775303
 5. [x] Trustless `yarn verify:proof` + `/verify` (sha256 + raw CID recompute, payer check, paging) + dual IPFS + schema v1 on write / legacy verify
 5a. [x] GitHub Actions CI + README badge; screenshots in `docs/screenshots/`
 6. [ ] Paste GitHub + HashScan + description into Google Form (**founder**)
-7. [ ] Video demo (**founder**)
+7. [x] Video demo: https://youtu.be/v6cNP-GSxfg (4:13)
 8. [ ] Developer Experience section of the same Google Form (**founder**)
 9. [ ] Optional AMA 2026-09-29
 10. [ ] Submit before deadline
