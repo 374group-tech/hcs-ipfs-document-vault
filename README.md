@@ -325,7 +325,7 @@ CREATE_SCAFFOLD_HBAR_TEMPLATE_DIR=/absolute/path/to/hcs-ipfs-document-vault \
   --ci --skip-install --skip-hedera-skills
 ```
 
-Without `-s hardhat` the CLI defaults to Foundry and fails if `forge` isn't installed.
+The bare command (`npm create scaffold-hbar@latest -- --template 374group-tech/hcs-ipfs-document-vault`) applies the `template.json` defaults (Next.js App Router, Hardhat, Yarn); checked with 0.4.1 `--ci` on 2026-10-02. If an older CLI picks Foundry and complains about `forge`, pass `-s hardhat`.
 
 ## Pin fee (SDK-native) and the reference contract
 
