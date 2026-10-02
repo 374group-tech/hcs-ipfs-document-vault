@@ -73,7 +73,7 @@ yarn next:dev                # http://localhost:3000
 #   /verify  — paste CID (+ optional local file) → Mirror match → IPFS download → match / tampered / unavailable
 ```
 
-npm equivalents: `npm run demo:topic -w @vault/nextjs`, `npm run demo:attest -w @vault/nextjs`, `npm run verify:proof -w @vault/nextjs -- <CID>`, `npm run next:dev`.
+npm equivalents (root scripts are package-manager agnostic): `npm install`, `npm run lint`, `npm test`, `npm run build`, `npm run demo:topic`, `npm run demo:attest`, `npm run verify:proof -- <CID> [--topic … --sequence …]`, `npm run next:dev`.
 
 **Expected attest stdout:** `sequenceNumber=…`,  
 `HashScan message (tx): https://hashscan.io/testnet/transaction/<transactionId>` and  
@@ -141,7 +141,7 @@ Package manager: **Yarn 3.2.3** workspaces **and** npm. Internal deps use `"@vau
 | `yarn verify:proof <CID>` | Trustless verify (HCS anchor + payer + IPFS bytes); exit codes in [Verify states](#verify-states) |
 | `yarn hardhat:compile` / `yarn hardhat:test` / `yarn hardhat:deploy` | Reference `PinFeeCollector` (optional) |
 
-Workspace equivalents: `npm run <script>` or `npm run <script> -w @vault/nextjs` for nextjs-only scripts.
+Root scripts delegate with `npm run <script> -w @vault/<pkg> --` (except `verify:proof`, which runs the CLI directly so its exit codes 0–4 reach your shell), so they behave the same after `yarn install` or `npm install` (and survive `create-scaffold-hbar --package-manager npm`). `postinstall` builds `@vault/ledger` (`dist/`), which `nextjs` and `hardhat` import; `yarn lint` rebuilds it first too.
 
 ## Prerequisites
 
@@ -173,6 +173,11 @@ Copy roots: `cp .env.example .env` and `cp packages/nextjs/.env.example packages
 | `PIN_FEE_AMOUNT` | no | Base units as bigint string (tinybars if HBAR) |
 | `PIN_TREASURY_ACCOUNT_ID` | no | Receives pin fee |
 | `NEXT_PUBLIC_*` | no | Safe client mirrors of network / topic / gateway / pin |
+| `DEMO_PRECOMPUTED_CID` | no | `demo:attest` dry-run: anchor this CID without an IPFS provider |
+| `DEMO_PREV_CID` / `DEMO_MIME` | no | `demo:attest`: set `prevCid` (revision chain) / `mime` in the schema-v1 message |
+| `HEDERA_EVM_PRIVATE_KEY` (alias `DEPLOYER_PRIVATE_KEY`) | reference contract only | ECDSA hex key for `yarn hardhat:deploy` — **never commit** |
+| `PIN_TREASURY_EVM_ADDRESS` | reference contract only | Treasury for `PinFeeCollector` deploy (falls back to `PIN_TREASURY_ACCOUNT_ID`) |
+| `HEDERA_RPC_URL` / `HEDERA_MAINNET_RPC_URL` | no | JSON-RPC for Hardhat (default Hashio testnet / mainnet) |
 
 `template.json` `envVars` entries are `{key, description}` only (Zod-valid for create-scaffold-hbar).
 
@@ -190,6 +195,7 @@ Copy roots: `cp .env.example .env` and `cp packages/nextjs/.env.example packages
 | `HCS_TOPIC_ID is required` | No topic yet | `yarn demo:topic` then re-run attest |
 | Mirror verify empty / no match | Lag or wrong topic | Wait a few seconds after submit; confirm topic id matches attest |
 | Dry-run vs live | Dry-run = HCS message only | Production still needs real bytes on IPFS; dry-run CID is demo-only |
+| `Cannot find module '@vault/ledger'` (TS2307) | Ledger `dist/` not built (install ran with `--ignore-scripts`) | `npm run build -w @vault/ledger` (or `yarn lint`, which builds it first) |
 | `yarn` / npm workspace resolve fails | Wrong dep protocol | Use `"@vault/ledger": "*"` and root `workspaces` |
 | Lint fails on Hardhat | Compile order | Root `yarn lint` compiles Hardhat first (see package scripts) |
 

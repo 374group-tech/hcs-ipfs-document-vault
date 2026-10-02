@@ -27,7 +27,7 @@
     "demo:attest": "npm run demo:attest -w @vault/nextjs --",
     "demo:topic": "npm run demo:topic -w @vault/nextjs --",
     "postinstall": "(husky || true) && npm run build -w @vault/ledger",
-    "verify:proof": "npm run verify:proof -w @vault/nextjs --"
+    "verify:proof": "cd packages/nextjs && node --import tsx scripts/verify-proof.ts"
   },
   "packageManager": "yarn@3.2.3",
   "devDependencies": {
