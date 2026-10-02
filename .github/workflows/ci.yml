@@ -26,8 +26,6 @@ jobs:
           cache: yarn
       - name: Install
         run: yarn install --immutable
-      - name: Build @vault/ledger (dist consumed by nextjs + hardhat)
-        run: yarn workspace @vault/ledger build
       - name: Lint (tsc, solhint, next lint)
         run: yarn lint
       - name: Test (ledger vitest, hardhat mocha, nextjs vitest)
@@ -51,7 +49,6 @@ jobs:
           node-version: 20
           cache: yarn
       - run: yarn install --immutable
-      - run: yarn workspace @vault/ledger build
       - name: HCS anchors for seq 1-5 (legacy + schema v1), content skipped
         run: |
           set -e
@@ -76,11 +73,15 @@ jobs:
           test "$code" -eq 2
 
   scaffold-smoke:
-    name: fresh create-scaffold-hbar@latest smoke
+    name: fresh create-scaffold-hbar@latest gate (${{ matrix.pm }})
     needs: check
     if: github.event_name != 'pull_request'
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 25
+    strategy:
+      fail-fast: false
+      matrix:
+        pm: [yarn, npm]
     steps:
       - uses: actions/setup-node@v5
         with:
@@ -94,13 +95,13 @@ jobs:
         run: |
           npm create scaffold-hbar@latest -- vault-app \
             --template ${{ github.repository }} \
-            -f nextjs-app -s hardhat --package-manager yarn --network testnet \
+            -f nextjs-app -s hardhat --package-manager ${{ matrix.pm }} --network testnet \
             --ci --skip-install --skip-hedera-skills
           test -f vault-app/package.json && test -f vault-app/docs/examples/agreement-seq5-tampered.txt && test -d vault-app/packages/ledger
-      - name: Install and test the scaffolded app
+      - name: Install, lint, test, build (bounty gate, no extra steps)
         working-directory: ${{ runner.temp }}/vault-app
         run: |
-          yarn install
-          yarn workspace @vault/ledger build
-          yarn workspace @vault/ledger test
-          yarn workspace @vault/nextjs test
+          ${{ matrix.pm }} install
+          ${{ matrix.pm }} run lint
+          ${{ matrix.pm }} test
+          ${{ matrix.pm }} run build

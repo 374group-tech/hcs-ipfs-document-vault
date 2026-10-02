@@ -293,7 +293,8 @@ Honest status from this workspace (Asia/Yerevan). Do not claim commands you have
 | Unit tests | `yarn test` | **PASS** (2026-09-27) — ledger + Hardhat + nextjs |
 | Build | `yarn build` | **PASS** (2026-09-27) — ledger + Hardhat compile + Next.js |
 | Fresh `create-scaffold-hbar@0.4.1` | `npm create scaffold-hbar@latest -- vault-app --template 374group-tech/hcs-ipfs-document-vault -f nextjs-app -s hardhat --package-manager yarn --ci --skip-install --skip-hedera-skills` | **PASS** (2026-09-29 Asia/Yerevan); also the `scaffold-smoke` CI job on every push to `main` |
-| CI | [GitHub Actions](https://github.com/374group-tech/hcs-ipfs-document-vault/actions/workflows/ci.yml) | install · lint (incl. `tsc`) · test · build, live testnet proof checks, fresh-scaffold smoke |
+| Fresh-scaffold gate, **yarn and npm** | scaffold → `install` → `lint` → `test` → `build` → `next:start` | **PASS** (2026-10-02 Asia/Yerevan, create-scaffold-hbar 0.4.1, both `--package-manager yarn` and `npm`): no extra steps; `/`, `/upload`, `/verify` HTTP 200; `/api/hcs/verify` seq 5 `hcs-only`; `verify:proof` bundled file `match` (exit 0), tampered `hash-mismatch` (exit 2). CI `scaffold-smoke` runs the same gate for both package managers |
+| CI | [GitHub Actions](https://github.com/374group-tech/hcs-ipfs-document-vault/actions/workflows/ci.yml) | install · lint (incl. `tsc`) · test · build, live testnet proof checks, fresh-scaffold gate (yarn + npm) |
 | Create topic | `yarn demo:topic` | **PASS** — topic [`0.0.10600873`](https://hashscan.io/testnet/topic/0.0.10600873) |
 | Local Kubo IPFS | `ipfs daemon` + API `:5001` | **PASS** — add source=`kubo` |
 | HBAR pin fee | `PIN_TOKEN_ID=HBAR` | **PASS** — 100000 tinybar → treasury [`0.0.10604200`](https://hashscan.io/testnet/account/0.0.10604200) · [transfer](https://hashscan.io/testnet/transaction/0.0.10600860%401789747920.746708423) |
